@@ -1,33 +1,5 @@
 
-#include <deal.II/lac/generic_linear_algebra.h>
-
-#define USE_TRILINOS_LA
-namespace LA
-{
-#ifdef USE_PETSC_LA
-  using namespace dealii::LinearAlgebraPETSc;
-#else
-  using namespace dealii::LinearAlgebraTrilinos;
-#endif
-}
-
-#ifndef __NSVector__DEFINED__
-typedef LA::MPI::Vector NSVector;
-#define __NSVector__DEFINED__
-
-typedef SparseMatrixEZ<double> DynamicMatrix
-typedef unsigned short local_index_type
-typedef unsigned long global_index_type
-typedef double data_type
-typedef bool flag_type
-
-#N_INDICATOR 3
-class Indicator: public std_cxx11::array<data_type,N_INDICATOR>
-{
-public:
-  void init();
-  bool operator<(const Indicator &op) const;
-};
+#include "MDFILU.h"
 
 void Indicator::init()
 {
@@ -38,19 +10,23 @@ void Indicator::init()
   return;
 }
 
-int Indicator::operator-(const Indicator &op) const
+int Indicator::operator- (const Indicator &op) const
 {
   for (unsigned int i=0; i<N_INDICATOR; ++i)
     {
       if ((*this)[i] < op[i])
-        return (-1);
+        {
+          return (-1);
+        }
       if ((*this)[i] > op[i])
-        return (1);
+        {
+          return (1);
+        }
     }
   return (0);
 }
 
-void get_indices_of_non_zeros(
+void get_indices_of_non_zeros (
   const DynamicMatrix &matrix,
   const global_index_type row_to_factor,
   const std_cxx11::array<flag_type> &row_factored,
@@ -71,7 +47,7 @@ void get_indices_of_non_zeros(
 
       if (!row_factored[i_col])
         {
-          incides_need_update.append(i_col);
+          incides_need_update.append (i_col);
         }
     }
   return;
@@ -85,9 +61,9 @@ void compute_discarded_value (
   const unsigned int fill_in_threshold,
   Indicator &return_value)
 {
-  const int prior_discarded_value(0);
-  const int prior_n_discarded(1);
-  const int prior_n_fill(2);
+  const int prior_discarded_value (0);
+  const int prior_n_discarded (1);
+  const int prior_n_fill (2);
   // const int prior_index(3);
 
   return_value.init();
@@ -109,14 +85,14 @@ void compute_discarded_value (
       if (i_col == row_to_factor)
         {
           // Store value of pivot
-          pivot = LU.el(row_to_factor,i_col);
-          Assert(pivot != 0.0, ExcMessage("Zero pivot encountered!"));
+          pivot = LU.el (row_to_factor,i_col);
+          Assert (pivot != 0.0, ExcMessage ("Zero pivot encountered!"));
           continue;
         }
       // Here we assume the matrix structure is symmetric.
       if (!row_factored[i_col])
         {
-          incides_need_update.append(i_col);
+          incides_need_update.append (i_col);
         }
     }
 
@@ -130,7 +106,7 @@ void compute_discarded_value (
         {
           const global_index_type j_col = incides_need_update[j];
           // Check fill-in level
-          unsigned int new_fill_in_level = fill_in_level.el(i_row, j_col);
+          unsigned int new_fill_in_level = fill_in_level.el (i_row, j_col);
           if (new_fill_in_level == 0 /* fill in level for new entry*/)
             {
               ++return_value[prior_n_fill];
@@ -143,7 +119,7 @@ void compute_discarded_value (
             {
               // Element will be discarded
               const data_type update = pivot_neg_inv *
-                                       LU.el(row_to_factor,j_col) * LU.el(i_row,row_to_factor);
+                                       LU.el (row_to_factor,j_col) * LU.el (i_row,row_to_factor);
               return_value[prior_discarded_value] += update*update;
               ++return_value[prior_n_discarded];
             }
@@ -155,11 +131,11 @@ void compute_discarded_value (
 
 // Determine the next row to be factored by finding out the one with minimum
 // indicator form rows that have not been factored.
-global_index_type find_min_discarded_value(
+global_index_type find_min_discarded_value (
   const std_cxx11::array<Indicator> &indicators,
   const std_cxx11::array<flag_type> &row_factored)
 {
-  global_index_type candidate(0);
+  global_index_type candidate (0);
   for (global_index_type i=0; i<indicators.size(); ++i)
     {
       if (row_factored[i])
@@ -222,7 +198,7 @@ void MDF_reordering_and_ILU_factoring (
       // for (global_index_type j_col=0; j_col<system_matrix.size(); ++j_col)
       for (global_index_type i_nz=0; i_nz<n_non_zero_in_row; ++i_nz)
         {
-          fill_in_level.set(i_row, incides_of_non_zeros[i_nz], 1);
+          fill_in_level.set (i_row, incides_of_non_zeros[i_nz], 1);
           // // a(i,j) exists?
           // if (system_matrix. (i,j) == 0.0)
           //   {
@@ -262,14 +238,14 @@ void MDF_reordering_and_ILU_factoring (
           if (i_col == row_to_factor)
             {
               // Store value of pivot
-              pivot = LU.el(row_to_factor,i_col);
-              Assert(pivot != 0.0, ExcMessage("Zero pivot encountered!"));
+              pivot = LU.el (row_to_factor,i_col);
+              Assert (pivot != 0.0, ExcMessage ("Zero pivot encountered!"));
               continue;
             }
           // Here we assume the matrix structure is symmetric.
           if (!row_factored[i_col])
             {
-              incides_need_update.append(i_col);
+              incides_need_update.append (i_col);
             }
         }
 
@@ -283,14 +259,14 @@ void MDF_reordering_and_ILU_factoring (
             {
               const global_index_type j_col = incides_need_update[j];
               // Check fill-in level
-              unsigned int new_fill_in_level = fill_in_level.el(i_row, j_col);
+              unsigned int new_fill_in_level = fill_in_level.el (i_row, j_col);
               if (new_fill_in_level == 0 /* fill in level for new entry*/)
                 {
-                  new_fill_in_level = 1 + fill_in_level.el(row_to_factor,j_col) +
-                                      fill_in_level.el(i_row,row_to_factor);
+                  new_fill_in_level = 1 + fill_in_level.el (row_to_factor,j_col) +
+                                      fill_in_level.el (i_row,row_to_factor);
                 }
 
-              const unsigned int fill_in_threshold(3);
+              const unsigned int fill_in_threshold (3);
               // Make sure that the provided fill_in_threshold consists with
               // the internal definition, i.e., has a offset one. See documentation
               // above for details
@@ -298,10 +274,10 @@ void MDF_reordering_and_ILU_factoring (
                 {
                   // Element accepted
                   const data_type update = pivot_neg_inv *
-                                           LU.el(row_to_factor,j_col) * LU.el(i_row,row_to_factor);
-                  LU.add(i_row, j_col, update);
+                                           LU.el (row_to_factor,j_col) * LU.el (i_row,row_to_factor);
+                  LU.add (i_row, j_col, update);
                   // Update fill-level if this is a new entry
-                  fill_in_level.set(i_row, j_col, new_fill_in_level);
+                  fill_in_level.set (i_row, j_col, new_fill_in_level);
                 }
             } // For each column need update
           compute_discarded_value (i_row, LU, row_factored, discarded_value[i_row]);
