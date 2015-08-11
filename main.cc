@@ -25,8 +25,14 @@ int main (int argc, char *argv[])
     system_matrix.print (fout);
   }
   // MDF_reordering_and_ILU_factoring (system_matrix, LU);
+  LU.copy_from (system_matrix);
 
   // Out put LU
+  {
+    std::ofstream fout ("LU.out");
+    LU.print (fout);
+    fout.close();
+  }
 
   // Make preconditioner from LU
 
