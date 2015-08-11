@@ -4,6 +4,7 @@
 
 #include <deal.II/lac/generic_linear_algebra.h>
 #include <deal.II/lac/sparse_matrix_ez.h>
+#include <deal.II/base/std_cxx11/array.h>
 
 using namespace dealii;
 
@@ -20,6 +21,7 @@ namespace LA
 #ifndef __NSVector__DEFINED__
 typedef LA::MPI::Vector NSVector;
 #define __NSVector__DEFINED__
+#endif
 
 typedef SparseMatrixEZ<double> DynamicMatrix;
 typedef unsigned short local_index_type;
@@ -39,20 +41,20 @@ public:
 void get_indices_of_non_zeros (
   const DynamicMatrix &matrix,
   const global_index_type row_to_factor,
-  const std_cxx11::array<flag_type> &row_factored,
-  std_vector<global_index_type> &incides_need_update,
+  const std::vector<flag_type> &row_factored,
+  std::vector<global_index_type> &incides_need_update,
   const bool except_pivot);
 
 void compute_discarded_value (
   const unsigned int row_to_factor,
   const DynamicMatrix &LU,
-  const std_cxx11::array<flag_type> &row_factored
+  const std::vector<flag_type> &row_factored,
   const unsigned int fill_in_threshold,
   Indicator &return_value);
 
 global_index_type find_min_discarded_value (
-  const std_cxx11::array<Indicator> &indicators,
-  const std_cxx11::array<flag_type> &row_factored);
+  const std::vector<Indicator> &indicators,
+  const std::vector<flag_type> &row_factored);
 
 void MDF_reordering_and_ILU_factoring (
   const LA::MPI::SparseMatrix &system_matrix,

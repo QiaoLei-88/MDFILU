@@ -29,7 +29,7 @@ int Indicator::operator- (const Indicator &op) const
 void get_indices_of_non_zeros (
   const DynamicMatrix &matrix,
   const global_index_type row_to_factor,
-  const std_cxx11::array<flag_type> &row_factored,
+  const std::vector<flag_type> &row_factored,
   std_vector<global_index_type> &incides_need_update,
   const bool except_pivot)
 {
@@ -57,7 +57,7 @@ void get_indices_of_non_zeros (
 void compute_discarded_value (
   const unsigned int row_to_factor,
   const DynamicMatrix &LU,
-  const std_cxx11::array<flag_type> &row_factored
+  const std::vector<flag_type> &row_factored
   const unsigned int fill_in_threshold,
   Indicator &return_value)
 {
@@ -132,8 +132,8 @@ void compute_discarded_value (
 // Determine the next row to be factored by finding out the one with minimum
 // indicator form rows that have not been factored.
 global_index_type find_min_discarded_value (
-  const std_cxx11::array<Indicator> &indicators,
-  const std_cxx11::array<flag_type> &row_factored)
+  const std::vector<Indicator> &indicators,
+  const std::vector<flag_type> &row_factored)
 {
   global_index_type candidate (0);
   for (global_index_type i=0; i<indicators.size(); ++i)
@@ -165,10 +165,10 @@ void MDF_reordering_and_ILU_factoring (
   //initialize the LU matrix
   LU.copy_from (system_matrix);
 
-  std_cxx11::array<Indicator> indicators (system_matrix.size());
-  std_cxx11::array<flag_type> row_factored (system_matrix.size(), false);
+  std::vector<Indicator> indicators (system_matrix.size());
+  std::vector<flag_type> row_factored (system_matrix.size(), false);
   // Record the factoring order
-  std_cxx11::array<global_index_type> permutation (system_matrix.size());
+  std::vector<global_index_type> permutation (system_matrix.size());
 
   // Initialize::BEGIN
   // Compute Initial fill in level
@@ -176,7 +176,7 @@ void MDF_reordering_and_ILU_factoring (
     {
       // Get indices of non-zero's of the target row
       const global_index_type n_non_zero_in_row = system_matrix.row_length (i_row);
-      std_cxx11::array<global_index_type> incides_of_non_zeros (n_non_zero_in_row);
+      std::vector<global_index_type> incides_of_non_zeros (n_non_zero_in_row);
 
       for (LA::MPI::SparseMatrix::iterator iter_col = system_matrix.begin (i_row),
            global_index_type i_col = 0;
