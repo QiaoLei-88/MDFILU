@@ -3,6 +3,9 @@
 #define __MDFILU__H__
 
 #include <deal.II/lac/generic_linear_algebra.h>
+#include <deal.II/lac/sparse_matrix_ez.h>
+
+using namespace dealii;
 
 #define USE_TRILINOS_LA
 namespace LA
@@ -18,13 +21,13 @@ namespace LA
 typedef LA::MPI::Vector NSVector;
 #define __NSVector__DEFINED__
 
-typedef SparseMatrixEZ<double> DynamicMatrix
-typedef unsigned short local_index_type
-typedef unsigned long global_index_type
-typedef double data_type
-typedef bool flag_type
+typedef SparseMatrixEZ<double> DynamicMatrix;
+typedef unsigned short local_index_type;
+typedef unsigned long global_index_type;
+typedef double data_type;
+typedef bool flag_type;
 
-#N_INDICATOR 3
+#define N_INDICATOR 3
 class Indicator: public std_cxx11::array<data_type,N_INDICATOR>
 {
 public:

@@ -1,6 +1,5 @@
 #include "MDFILU.h"
 
-
 int main()
 {
   const unsigned int degree (10);
