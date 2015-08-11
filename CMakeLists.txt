@@ -17,7 +17,7 @@ SET(TARGET "MDFILU")
 # page of the documentation.
 SET(TARGET_SRC
   main.cc
-  ${TARGET}.cc
+#  ${TARGET}.cc
   )
 
 # Usually, you will not need to modify anything beyond this point...
