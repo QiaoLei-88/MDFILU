@@ -19,9 +19,11 @@ int main (int argc, char *argv[])
       }
   fin.close();
   system_matrix.compress (VectorOperation::insert);
-  // Out put system_matrix
-  std::ofstream fout ("matrix.out");
-  system_matrix.print (fout);
+  {
+    // Out put system_matrix
+    std::ofstream fout ("matrix.out");
+    system_matrix.print (fout);
+  }
   // MDF_reordering_and_ILU_factoring (system_matrix, LU);
 
   // Out put LU
