@@ -23,6 +23,7 @@ int main (int argc, char *argv[])
     // Out put system_matrix
     std::ofstream fout ("matrix.out");
     system_matrix.print (fout);
+    fout.close();
   }
   // MDF_reordering_and_ILU_factoring (system_matrix, LU);
   LU.copy_from (system_matrix);
