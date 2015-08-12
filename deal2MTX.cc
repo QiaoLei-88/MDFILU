@@ -68,8 +68,8 @@ int main (int argc, char *argv[])
       fin >> i;
       fin >> j;
       // i,j transpose
-      fout << j + 1 << "\t";
       fout << i + 1 << "\t";
+      fout << j + 1 << "\t";
       fin >> value;
       fout << value << std::endl;
     }
