@@ -174,7 +174,8 @@ global_index_type find_min_discarded_value (
 
 void MDF_reordering_and_ILU_factoring (
   const LA::MPI::SparseMatrix &system_matrix,
-  DynamicMatrix &LU)
+  DynamicMatrix &LU,
+  std::vector<global_index_type> &permutation)
 {
 #ifdef VERBOSE_OUTPUT
   std::ofstream debugStream ("debug.out");
@@ -191,8 +192,6 @@ void MDF_reordering_and_ILU_factoring (
 
   std::vector<Indicator> indicators (degree);
   std::vector<flag_type> row_factored (degree, false);
-  // Record the factoring order
-  std::vector<global_index_type> permutation (degree);
 
   // Initialize::BEGIN
   // Compute Initial fill in level

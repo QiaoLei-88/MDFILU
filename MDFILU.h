@@ -63,6 +63,7 @@ global_index_type find_min_discarded_value (
 
 void MDF_reordering_and_ILU_factoring (
   const LA::MPI::SparseMatrix &system_matrix,
-  DynamicMatrix &LU);
+  DynamicMatrix &LU,
+  std::vector<global_index_type> &permutation);
 
 #endif

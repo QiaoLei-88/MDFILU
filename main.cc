@@ -13,6 +13,7 @@ int main (int argc, char *argv[])
   const unsigned int degree (10);
   LA::MPI::SparseMatrix system_matrix (degree, degree, /*max_entries_per_row*/degree);
   DynamicMatrix LU (degree, degree, /*max_entries_per_row*/degree);
+  std::vector<global_index_type> permutation (degree);
 
   // Set value for system_matrix
   std::ifstream fin ("matrix.dat");
@@ -31,7 +32,7 @@ int main (int argc, char *argv[])
     system_matrix.print (fout);
     fout.close();
   }
-  MDF_reordering_and_ILU_factoring (system_matrix, LU);
+  MDF_reordering_and_ILU_factoring (system_matrix, LU, permutation);
 
   // Out put LU
   {
