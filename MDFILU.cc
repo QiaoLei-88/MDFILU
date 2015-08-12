@@ -199,16 +199,19 @@ void MDF_reordering_and_ILU_factoring (
   for (global_index_type i_row=0; i_row<degree; ++i_row)
     {
       // Get indices of non-zero's of the target row
-      const global_index_type n_non_zero_in_row = system_matrix.row_length (i_row);
-      std::vector<global_index_type> incides_of_non_zeros (n_non_zero_in_row);
 
-      global_index_type i_col = 0;
-      for (LA::MPI::SparseMatrix::const_iterator iter_col (system_matrix.begin (i_row));
-           iter_col != system_matrix.end (i_row);
-           ++iter_col, ++i_col)
-        {
-          incides_of_non_zeros[i_col] = iter_col->column();
-        }
+      std::vector<global_index_type> incides_of_non_zeros;
+      get_indices_of_non_zeros<DynamicMatrix>
+      (LU, i_row, row_factored, incides_of_non_zeros, /*except_pivot=*/ false);
+
+      const global_index_type n_non_zero_in_row = incides_of_non_zeros.size();
+      // global_index_type i_col = 0;
+      // for (LA::MPI::SparseMatrix::const_iterator iter_col (system_matrix.begin (i_row));
+      //      iter_col != system_matrix.end (i_row);
+      //      ++iter_col, ++i_col)
+      //   {
+      //     incides_of_non_zeros[i_col] = iter_col->column();
+      //   }
 
       // Set initial fill in level.
       // Because the matrix access function SparseMatrixEZ.el(i,j) will return a zero when element
