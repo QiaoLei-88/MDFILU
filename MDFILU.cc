@@ -63,6 +63,14 @@ void compute_discarded_value (
   const unsigned int fill_in_threshold,
   Indicator &return_value)
 {
+#ifdef VERBOSE_OUTPUT
+  if (row_to_factor == 0)
+    {
+      std::ofstream f_level ("fill_level_cdv.out");
+      fill_in_level.print (f_level);
+      f_level.close();
+    }
+#endif
   const int prior_discarded_value (0);
   const int prior_n_discarded (1);
   const int prior_n_fill (2);
@@ -101,8 +109,15 @@ void compute_discarded_value (
         {
           const global_index_type j_col = incides_need_update[j];
           // Check fill-in level
-          unsigned int new_fill_in_level = fill_in_level.el (i_row, j_col);
-          if (new_fill_in_level == 0 /* fill in level for new entry*/)
+          const data_type new_fill_in_level = fill_in_level.el (i_row, j_col);
+#ifdef VERBOSE_OUTPUT
+          std::ofstream f_level ("fill_level_verbos.out", std::fstream::app);
+          f_level << row_to_factor << "\t"
+                  << i_row << "\t" << j_col << "\t"
+                  << fill_in_level.el (i_row, j_col) << std::endl;
+          f_level.close();
+#endif
+          if (new_fill_in_level == 0.0 /* fill in level for new entry*/)
             {
               ++return_value[prior_n_fill];
             }
@@ -168,6 +183,7 @@ void MDF_reordering_and_ILU_factoring (
   const global_index_type degree = system_matrix.m();
   // Record fill-in level for all non-zero entries, we need this to compute
   // level for new fill-ins.
+  // SparseMatrixEZ<double> fill_in_level (degree,degree,degree);
   DynamicMatrix fill_in_level (degree,degree,degree);
 
   //initialize the LU matrix
@@ -217,7 +233,12 @@ void MDF_reordering_and_ILU_factoring (
           //     fill_in_level.add (i, j, 0);
           //   }
         }
-      // Compute initial discarded value
+    }
+
+  // Compute initial discarded value, must be done after all fill-in level have
+  // been set.
+  for (global_index_type i_row=0; i_row<degree; ++i_row)
+    {
       compute_discarded_value (i_row,
                                LU,
                                fill_in_level,
@@ -225,8 +246,15 @@ void MDF_reordering_and_ILU_factoring (
                                fill_in_threshold,
                                indicators[i_row]);
     }
-  // Initialize::END
 
+  // Initialize::END
+#ifdef VERBOSE_OUTPUT
+  {
+    std::ofstream f_level ("fill_level.out");
+    fill_in_level.print (f_level);
+    f_level.close();
+  }
+#endif
 
   // Factoring the matrix
   for (global_index_type n_row_factored=0; n_row_factored<degree; ++n_row_factored)
@@ -238,17 +266,17 @@ void MDF_reordering_and_ILU_factoring (
 #ifdef VERBOSE_OUTPUT
       for (global_index_type i=0; i<degree; ++i)
         {
-          debugStream << indicators.at (i).at (0) << "  ";
+          debugStream << indicators.at (i).at (0) << "\t ";
         }
       debugStream << std::endl;
       for (global_index_type i=0; i<degree; ++i)
         {
-          debugStream << indicators.at (i).at (1) << "  ";
+          debugStream << indicators.at (i).at (1) << "\t ";
         }
       debugStream << std::endl;
       for (global_index_type i=0; i<degree; ++i)
         {
-          debugStream << indicators.at (i).at (2) << "  ";
+          debugStream << indicators.at (i).at (2) << "\t ";
         }
       debugStream << std::endl;
 #endif
@@ -269,12 +297,18 @@ void MDF_reordering_and_ILU_factoring (
       get_indices_of_non_zeros<DynamicMatrix>
       (LU, row_to_factor, row_factored, incides_need_update, except_pivot);
 
-      const data_type pivot_neg_inv = -1.0/pivot;
+      const data_type pivot_inv = 1.0/pivot;
       const global_index_type n_row_need_update = incides_need_update.size();
 
       for (global_index_type i=0; i<n_row_need_update; ++i)
         {
           const global_index_type i_row = incides_need_update[i];
+
+          // Update current column, i.e., lower triangle part
+          const data_type value = LU.el (i_row, row_to_factor);
+          LU.set (i_row,row_to_factor, value*pivot_inv);
+
+          // Update the remaining matrix
           for (global_index_type j=0; j<n_row_need_update; ++j)
             {
               const global_index_type j_col = incides_need_update[j];
@@ -282,7 +316,9 @@ void MDF_reordering_and_ILU_factoring (
               unsigned int new_fill_in_level = fill_in_level.el (i_row, j_col);
               if (new_fill_in_level == 0 /* fill in level for new entry*/)
                 {
-                  new_fill_in_level = 1 + fill_in_level.el (row_to_factor,j_col) +
+                  // Because we set original entry to level 1, what we need to set is
+                  // (lv(i)-1) + (lv(j)-1) + 1 + 1 = lv(i) + lv(j).
+                  new_fill_in_level = fill_in_level.el (row_to_factor,j_col) +
                                       fill_in_level.el (i_row,row_to_factor);
                 }
 
@@ -293,8 +329,7 @@ void MDF_reordering_and_ILU_factoring (
               if (new_fill_in_level <= fill_in_threshold)
                 {
                   // Element accepted
-                  const data_type update = pivot_neg_inv *
-                                           LU.el (row_to_factor,j_col) * LU.el (i_row,row_to_factor);
+                  const data_type update = -LU.el (row_to_factor,j_col) * LU.el (i_row,row_to_factor);
                   LU.add (i_row, j_col, update);
                   // Update fill-level if this is a new entry
                   fill_in_level.set (i_row, j_col, new_fill_in_level);
