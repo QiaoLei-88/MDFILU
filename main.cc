@@ -1,8 +1,14 @@
 #include "MDFILU.h"
 #include <fstream>
 
+
+
 int main (int argc, char *argv[])
 {
+// #ifdef VERBOSE_OUTPUT
+//   debugStream.open("debug.out");
+// #endif
+
   Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, ::numbers::invalid_unsigned_int);
   const unsigned int degree (10);
   LA::MPI::SparseMatrix system_matrix (degree, degree, /*max_entries_per_row*/degree);
@@ -25,8 +31,7 @@ int main (int argc, char *argv[])
     system_matrix.print (fout);
     fout.close();
   }
-  // MDF_reordering_and_ILU_factoring (system_matrix, LU);
-  LU.copy_from (system_matrix);
+  MDF_reordering_and_ILU_factoring (system_matrix, LU);
 
   // Out put LU
   {
@@ -36,6 +41,8 @@ int main (int argc, char *argv[])
   }
 
   // Make preconditioner from LU
-
+// #ifdef VERBOSE_OUTPUT
+//   debugStream.close();
+// #endif
   return (0);
 }

@@ -26,16 +26,17 @@ int Indicator::operator- (const Indicator &op) const
   return (0);
 }
 
+template<typename Matrix>
 void get_indices_of_non_zeros (
-  const DynamicMatrix &matrix,
+  const Matrix &matrix,
   const global_index_type row_to_factor,
   const std::vector<flag_type> &row_factored,
-  std_vector<global_index_type> &incides_need_update,
+  std::vector<global_index_type> &incides_need_update,
   const bool except_pivot)
 {
-  for (LA::MPI::SparseMatrix::iterator iter_col = system_matrix.begin (row_to_factor),
-       global_index_type i_col = 0;
-       iter_col != system_matrix.end (row_to_factor);
+  global_index_type i_col = 0;
+  for (typename Matrix::const_iterator iter_col = matrix.begin (row_to_factor);
+       iter_col != matrix.end (row_to_factor);
        ++iter_col, ++i_col)
     {
       const global_index_type i_col = iter_col->column();
@@ -47,7 +48,7 @@ void get_indices_of_non_zeros (
 
       if (!row_factored[i_col])
         {
-          incides_need_update.append (i_col);
+          incides_need_update.push_back (i_col);
         }
     }
   return;
@@ -57,7 +58,8 @@ void get_indices_of_non_zeros (
 void compute_discarded_value (
   const unsigned int row_to_factor,
   const DynamicMatrix &LU,
-  const std::vector<flag_type> &row_factored
+  const DynamicMatrix &fill_in_level,
+  const std::vector<flag_type> &row_factored,
   const unsigned int fill_in_threshold,
   Indicator &return_value)
 {
@@ -67,6 +69,16 @@ void compute_discarded_value (
   // const int prior_index(3);
 
   return_value.init();
+  const data_type pivot = LU.el (row_to_factor,row_to_factor);
+
+  if (pivot==0.0)
+    {
+      return_value[prior_n_fill] = 1<<30;
+      return_value[prior_n_discarded] = 1<<30;
+      return_value[prior_discarded_value] = 1e+200;
+      return;
+    }
+
   // compute discarded value for i_row := row_to_factor.
   // During this procedure, we need to go through all un-factored entries that connected
   // with this row, i.e., for all k that a(i_row, k) \ne 0 and a(k, i_row) \ne 0.
@@ -74,27 +86,10 @@ void compute_discarded_value (
 
   // Find number of rows need to go through. The value is all non-zero
   // entries except the pivot and factored rows.
-  std_vector<global_index_type> incides_need_update;
-  data_type pivot;
-  for (LA::MPI::SparseMatrix::iterator iter_col = system_matrix.begin (row_to_factor),
-       global_index_type i_col = 0;
-       iter_col != system_matrix.end (row_to_factor);
-       ++iter_col, ++i_col)
-    {
-      const global_index_type i_col = iter_col->column();
-      if (i_col == row_to_factor)
-        {
-          // Store value of pivot
-          pivot = LU.el (row_to_factor,i_col);
-          Assert (pivot != 0.0, ExcMessage ("Zero pivot encountered!"));
-          continue;
-        }
-      // Here we assume the matrix structure is symmetric.
-      if (!row_factored[i_col])
-        {
-          incides_need_update.append (i_col);
-        }
-    }
+  std::vector<global_index_type> incides_need_update;
+  const bool except_pivot (true);
+  get_indices_of_non_zeros<DynamicMatrix>
+  (LU, row_to_factor, row_factored, incides_need_update, except_pivot);
 
   const data_type pivot_neg_inv = -1.0/pivot;
   const global_index_type n_row_need_update = incides_need_update.size();
@@ -136,21 +131,29 @@ global_index_type find_min_discarded_value (
   const std::vector<flag_type> &row_factored)
 {
   global_index_type candidate (0);
+  bool need_init_candidate (true);
   for (global_index_type i=0; i<indicators.size(); ++i)
     {
       if (row_factored[i])
         {
           continue;
         }
+      // Set first un-factored row as candidate if it is not initialized
+      if (need_init_candidate)
+        {
+          candidate = i;
+          need_init_candidate = false;
+        }
+
       // This means will not update selected row when indicators is equal,
       // which means small index is with higher priority in tie situation.
       // One can switch to large index first by using " <=0 ".
-      if ((indicators[i][level] - indicators[candidate][level]) < 0)
+      if ((indicators[i] - indicators[candidate]) < 0)
         {
           candidate = i;
         }
     }
-  return;
+  return (candidate);
 }
 
 
@@ -158,28 +161,33 @@ void MDF_reordering_and_ILU_factoring (
   const LA::MPI::SparseMatrix &system_matrix,
   DynamicMatrix &LU)
 {
+#ifdef VERBOSE_OUTPUT
+  std::ofstream debugStream ("debug.out");
+#endif
+  const global_index_type fill_in_threshold (20);
+  const global_index_type degree = system_matrix.m();
   // Record fill-in level for all non-zero entries, we need this to compute
   // level for new fill-ins.
-  DynamicMatrix fill_in_level (system_matrix);
+  DynamicMatrix fill_in_level (degree,degree,degree);
 
   //initialize the LU matrix
   LU.copy_from (system_matrix);
 
-  std::vector<Indicator> indicators (system_matrix.size());
-  std::vector<flag_type> row_factored (system_matrix.size(), false);
+  std::vector<Indicator> indicators (degree);
+  std::vector<flag_type> row_factored (degree, false);
   // Record the factoring order
-  std::vector<global_index_type> permutation (system_matrix.size());
+  std::vector<global_index_type> permutation (degree);
 
   // Initialize::BEGIN
   // Compute Initial fill in level
-  for (global_index_type i_row=0; i_row<system_matrix.size(); ++i_row)
+  for (global_index_type i_row=0; i_row<degree; ++i_row)
     {
       // Get indices of non-zero's of the target row
       const global_index_type n_non_zero_in_row = system_matrix.row_length (i_row);
       std::vector<global_index_type> incides_of_non_zeros (n_non_zero_in_row);
 
-      for (LA::MPI::SparseMatrix::iterator iter_col = system_matrix.begin (i_row),
-           global_index_type i_col = 0;
+      global_index_type i_col = 0;
+      for (LA::MPI::SparseMatrix::const_iterator iter_col (system_matrix.begin (i_row));
            iter_col != system_matrix.end (i_row);
            ++iter_col, ++i_col)
         {
@@ -210,44 +218,56 @@ void MDF_reordering_and_ILU_factoring (
           //   }
         }
       // Compute initial discarded value
-      compute_discarded_value (i_row, LU, row_factored, discarded_value[i_row]);
+      compute_discarded_value (i_row,
+                               LU,
+                               fill_in_level,
+                               row_factored,
+                               fill_in_threshold,
+                               indicators[i_row]);
     }
   // Initialize::END
 
 
   // Factoring the matrix
-  for (global_index_type n_row_factored=0; n_row_factored<system_matrix.size(); ++n_row_factored)
+  for (global_index_type n_row_factored=0; n_row_factored<degree; ++n_row_factored)
     {
       // Find the row with minimal discarded value
-      const global_index_type row_to_factor = find_min_discarded_value();
+      const global_index_type row_to_factor
+        = find_min_discarded_value (indicators,row_factored);
+
+#ifdef VERBOSE_OUTPUT
+      for (global_index_type i=0; i<degree; ++i)
+        {
+          debugStream << indicators.at (i).at (0) << "  ";
+        }
+      debugStream << std::endl;
+      for (global_index_type i=0; i<degree; ++i)
+        {
+          debugStream << indicators.at (i).at (1) << "  ";
+        }
+      debugStream << std::endl;
+      for (global_index_type i=0; i<degree; ++i)
+        {
+          debugStream << indicators.at (i).at (2) << "  ";
+        }
+      debugStream << std::endl;
+#endif
 
       row_factored[row_to_factor] = true;
       permutation[n_row_factored] = row_to_factor;
 
+#ifdef VERBOSE_OUTPUT
+      debugStream << "row_to_factor: " << row_to_factor << std::endl;
+#endif
 
       // Find number of rows need to go through. The value is all non-zero
       // entries except the pivot and factored rows.
-      std_vector<global_index_type> incides_need_update;
-      data_type pivot;
-      for (LA::MPI::SparseMatrix::iterator iter_col = system_matrix.begin (row_to_factor),
-           global_index_type i_col = 0;
-           iter_col != system_matrix.end (row_to_factor);
-           ++iter_col, ++i_col)
-        {
-          const global_index_type i_col = iter_col->column();
-          if (i_col == row_to_factor)
-            {
-              // Store value of pivot
-              pivot = LU.el (row_to_factor,i_col);
-              Assert (pivot != 0.0, ExcMessage ("Zero pivot encountered!"));
-              continue;
-            }
-          // Here we assume the matrix structure is symmetric.
-          if (!row_factored[i_col])
-            {
-              incides_need_update.append (i_col);
-            }
-        }
+      std::vector<global_index_type> incides_need_update;
+      const data_type pivot = LU.el (row_to_factor,row_to_factor);
+      Assert (pivot != 0.0, ExcMessage ("Zero pivot encountered!"));
+      const bool except_pivot (true);
+      get_indices_of_non_zeros<DynamicMatrix>
+      (LU, row_to_factor, row_factored, incides_need_update, except_pivot);
 
       const data_type pivot_neg_inv = -1.0/pivot;
       const global_index_type n_row_need_update = incides_need_update.size();
@@ -280,9 +300,22 @@ void MDF_reordering_and_ILU_factoring (
                   fill_in_level.set (i_row, j_col, new_fill_in_level);
                 }
             } // For each column need update
-          compute_discarded_value (i_row, LU, row_factored, discarded_value[i_row]);
+          compute_discarded_value (i_row,
+                                   LU,
+                                   fill_in_level,
+                                   row_factored,
+                                   fill_in_threshold,
+                                   indicators[i_row]);
         } // For each row need update
     } // For each row in matrix
   return;
 }
 
+// template get_indices_of_non_zeros<LA::MPI::SparseMatrix>;
+template
+void get_indices_of_non_zeros<DynamicMatrix> (
+  const DynamicMatrix &matrix,
+  const global_index_type row_to_factor,
+  const std::vector<flag_type> &row_factored,
+  std::vector<global_index_type> &incides_need_update,
+  const bool except_pivot);

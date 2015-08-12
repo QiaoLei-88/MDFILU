@@ -6,6 +6,10 @@
 #include <deal.II/lac/sparse_matrix_ez.h>
 #include <deal.II/base/std_cxx11/array.h>
 
+#include <fstream>
+
+#define VERBOSE_OUTPUT
+
 using namespace dealii;
 
 #define USE_TRILINOS_LA
@@ -34,12 +38,12 @@ class Indicator: public std_cxx11::array<data_type,N_INDICATOR>
 {
 public:
   void init();
-  bool operator< (const Indicator &op) const;
+  int operator- (const Indicator &op) const;
 };
 
-
+template<typename Matrix>
 void get_indices_of_non_zeros (
-  const DynamicMatrix &matrix,
+  const Matrix &matrix,
   const global_index_type row_to_factor,
   const std::vector<flag_type> &row_factored,
   std::vector<global_index_type> &incides_need_update,
@@ -48,6 +52,7 @@ void get_indices_of_non_zeros (
 void compute_discarded_value (
   const unsigned int row_to_factor,
   const DynamicMatrix &LU,
+  const DynamicMatrix &fill_in_level,
   const std::vector<flag_type> &row_factored,
   const unsigned int fill_in_threshold,
   Indicator &return_value);
