@@ -48,31 +48,36 @@ int main (int argc, char *argv[])
     const unsigned int estimated_row_length (10);
     DynamicMatrix A (degree, degree, estimated_row_length);
     // Compute LD*U
-    for (unsigned i_row=0; i_row<degree; ++i_row)
-      for (unsigned j_col=0; j_col<degree; ++j_col)
-        {
-          data_type value = 0;
-          unsigned vmult_max_index = 0;
-          // Diagonal values of L is always 1 thus not been stored.
-          // Recover its effect manually.
-          if (j_col>=i_row)
-            {
-              value = LU.el (i_row,j_col);
-              vmult_max_index = i_row;
-            }
-          else
-            {
-              vmult_max_index = j_col+1;
-            }
-          for (unsigned k=0; k<vmult_max_index; ++k)
-            {
-              value += LU.el (i_row,k) * LU.el (k,j_col);
-            }
-          if (std::abs (value) > tolerance)
-            {
-              A.set (i_row, j_col, value);
-            }
-        }
+    for (unsigned i=0; i<degree; ++i)
+      {
+        const global_index_type i_row = permutation[i];
+        for (unsigned j=0; j<degree; ++j)
+          {
+            const global_index_type j_col = permutation[j];
+            data_type value = 0;
+            unsigned vmult_max_index = 0;
+            // Diagonal values of L is always 1 thus not been stored.
+            // Recover its effect manually.
+            if (j>=i)
+              {
+                value = LU.el (i_row,j_col);
+                vmult_max_index = i;
+              }
+            else
+              {
+                vmult_max_index = j+1;
+              }
+            for (unsigned k=0; k<vmult_max_index; ++k)
+              {
+                const global_index_type k_permuted = permutation[k];
+                value += LU.el (i_row,k_permuted) * LU.el (k_permuted,j_col);
+              }
+            if (std::abs (value) > tolerance)
+              {
+                A.set (i_row, j_col, value);
+              }
+          }
+      }
     std::ofstream fout ("A.out");
     A.print (fout);
     fout.close();
