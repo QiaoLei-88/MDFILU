@@ -10,15 +10,16 @@ int main (int argc, char *argv[])
 // #endif
 
   Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, ::numbers::invalid_unsigned_int);
-  const unsigned int degree (10);
-  LA::MPI::SparseMatrix system_matrix (degree, degree, /*max_entries_per_row*/degree);
-  DynamicMatrix LU (degree, degree, /*max_entries_per_row*/degree);
+  const global_index_type degree (10);
+  const unsigned int estimated_row_length (10);
+  LA::MPI::SparseMatrix system_matrix (degree, degree, /*max_entries_per_row*/estimated_row_length);
+  DynamicMatrix LU (degree, degree, /*max_entries_per_row*/estimated_row_length);
   std::vector<global_index_type> permutation (degree);
 
   // Set value for system_matrix
   std::ifstream fin ("matrix.dat");
-  for (unsigned i=0; i<degree; ++i)
-    for (unsigned j=0; j<degree; ++j)
+  for (global_index_type i=0; i<degree; ++i)
+    for (global_index_type j=0; j<degree; ++j)
       {
         data_type value;
         fin >> value;
@@ -45,17 +46,16 @@ int main (int argc, char *argv[])
   // Ignore sparsity pattern fist.
   {
     const data_type tolerance (1e-12);
-    const unsigned int estimated_row_length (10);
     DynamicMatrix A (degree, degree, estimated_row_length);
     // Compute LD*U
-    for (unsigned i=0; i<degree; ++i)
+    for (global_index_type i=0; i<degree; ++i)
       {
         const global_index_type i_row = permutation[i];
-        for (unsigned j=0; j<degree; ++j)
+        for (global_index_type j=0; j<degree; ++j)
           {
             const global_index_type j_col = permutation[j];
             data_type value = 0;
-            unsigned vmult_max_index = 0;
+            global_index_type vmult_max_index = 0;
             // Diagonal values of L is always 1 thus not been stored.
             // Recover its effect manually.
             if (j>=i)
@@ -67,7 +67,7 @@ int main (int argc, char *argv[])
               {
                 vmult_max_index = j+1;
               }
-            for (unsigned k=0; k<vmult_max_index; ++k)
+            for (global_index_type k=0; k<vmult_max_index; ++k)
               {
                 const global_index_type k_permuted = permutation[k];
                 value += LU.el (i_row,k_permuted) * LU.el (k_permuted,j_col);
