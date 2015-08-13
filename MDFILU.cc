@@ -309,7 +309,6 @@ void MDF_reordering_and_ILU_factoring (
           // Update current column, i.e., lower triangle part
           const data_type value = LU.el (i_row, row_to_factor);
           LU.set (i_row,row_to_factor, value*pivot_inv);
-
           // Update the remaining matrix
           for (global_index_type j=0; j<n_row_need_update; ++j)
             {
