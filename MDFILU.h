@@ -47,6 +47,8 @@ public:
   const std::vector<global_index_type> &get_permutation() const;
   const DynamicMatrix &get_LU() const;
   ~MDFILU();
+
+
 private:
 
 #define N_INDICATOR 3
@@ -57,27 +59,15 @@ private:
     int operator- (const Indicator &op) const;
   };
 
-  template<typename Matrix>
   void get_indices_of_non_zeros (
-    const Matrix &matrix,
     const global_index_type row_to_factor,
-    const std::vector<flag_type> &row_factored,
     std::vector<global_index_type> &incides_need_update,
-    const bool except_pivot);
+    const bool except_pivot) const;
 
-  void compute_discarded_value (
-    const unsigned int row_to_factor,
-    const DynamicMatrix &LU,
-    const DynamicMatrix &fill_in_level,
-    const std::vector<flag_type> &row_factored,
-    const unsigned int fill_in_threshold,
-    Indicator &return_value);
+  void compute_discarded_value (const unsigned int row_to_factor);
 
-  global_index_type find_min_discarded_value (
-    const std::vector<Indicator> &indicators,
-    const std::vector<flag_type> &row_factored);
-
-  void MDF_reordering_and_ILU_factoring ();
+  global_index_type find_min_discarded_value() const;
+  void MDF_reordering_and_ILU_factoring();
 
 
   const global_index_type degree;
@@ -91,6 +81,10 @@ private:
 
   std::vector<global_index_type> permutation;
   std::vector<Indicator> indicators;
+
+  // During factoring procedure, we need to go through all un-factored entries that connected
+  // with this row, i.e., for all k that a(i_row, k) \ne 0 and a(k, i_row) \ne 0.
+  // That's why we need the flag array row_factored.
   std::vector<flag_type> row_factored;
 };
 

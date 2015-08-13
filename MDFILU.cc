@@ -55,17 +55,14 @@ int MDFILU::Indicator::operator- (const Indicator &op) const
   return (0);
 }
 
-template<typename Matrix>
 void MDFILU::get_indices_of_non_zeros (
-  const Matrix &matrix,
   const global_index_type row_to_factor,
-  const std::vector<flag_type> &row_factored,
   std::vector<global_index_type> &incides_need_update,
-  const bool except_pivot)
+  const bool except_pivot) const
 {
   global_index_type i_col = 0;
-  for (typename Matrix::const_iterator iter_col = matrix.begin (row_to_factor);
-       iter_col != matrix.end (row_to_factor);
+  for (typename DynamicMatrix::const_iterator iter_col = LU.begin (row_to_factor);
+       iter_col != LU.end (row_to_factor);
        ++iter_col, ++i_col)
     {
       const global_index_type i_col = iter_col->column();
@@ -84,14 +81,9 @@ void MDFILU::get_indices_of_non_zeros (
 }
 
 
-void MDFILU::compute_discarded_value (
-  const unsigned int row_to_factor,
-  const DynamicMatrix &LU,
-  const DynamicMatrix &fill_in_level,
-  const std::vector<flag_type> &row_factored,
-  const unsigned int fill_in_threshold,
-  Indicator &return_value)
+void MDFILU::compute_discarded_value (const unsigned int row_to_factor)
 {
+  Indicator &return_value = indicators[row_to_factor];
 #ifdef VERBOSE_OUTPUT
   if (row_to_factor == 0)
     {
@@ -125,8 +117,7 @@ void MDFILU::compute_discarded_value (
   // entries except the pivot and factored rows.
   std::vector<global_index_type> incides_need_update;
   const bool except_pivot (true);
-  get_indices_of_non_zeros<DynamicMatrix>
-  (LU, row_to_factor, row_factored, incides_need_update, except_pivot);
+  get_indices_of_non_zeros (row_to_factor, incides_need_update, except_pivot);
 
   const data_type pivot_neg_inv = -1.0/pivot;
   const global_index_type n_row_need_update = incides_need_update.size();
@@ -170,9 +161,7 @@ void MDFILU::compute_discarded_value (
 
 // Determine the next row to be factored by finding out the one with minimum
 // indicator form rows that have not been factored.
-global_index_type MDFILU::find_min_discarded_value (
-  const std::vector<Indicator> &indicators,
-  const std::vector<flag_type> &row_factored)
+global_index_type MDFILU::find_min_discarded_value() const
 {
   global_index_type candidate (0);
   bool need_init_candidate (true);
@@ -214,8 +203,7 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
       // Get indices of non-zero's of the target row
 
       std::vector<global_index_type> incides_of_non_zeros;
-      get_indices_of_non_zeros<DynamicMatrix>
-      (LU, i_row, row_factored, incides_of_non_zeros, /*except_pivot=*/ false);
+      get_indices_of_non_zeros (i_row, incides_of_non_zeros, /*except_pivot=*/ false);
 
       const global_index_type n_non_zero_in_row = incides_of_non_zeros.size();
       // global_index_type i_col = 0;
@@ -255,12 +243,7 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
   // been set.
   for (global_index_type i_row=0; i_row<degree; ++i_row)
     {
-      compute_discarded_value (i_row,
-                               LU,
-                               fill_in_level,
-                               row_factored,
-                               fill_in_threshold,
-                               indicators[i_row]);
+      compute_discarded_value (i_row);
     }
 
   // Initialize::END
@@ -277,7 +260,7 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
     {
       // Find the row with minimal discarded value
       const global_index_type row_to_factor
-        = find_min_discarded_value (indicators,row_factored);
+        = find_min_discarded_value();
 
 #ifdef VERBOSE_OUTPUT
       for (global_index_type i=0; i<degree; ++i)
@@ -310,8 +293,7 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
       const data_type pivot = LU.el (row_to_factor,row_to_factor);
       Assert (pivot != 0.0, ExcMessage ("Zero pivot encountered!"));
       const bool except_pivot (true);
-      get_indices_of_non_zeros<DynamicMatrix>
-      (LU, row_to_factor, row_factored, incides_need_update, except_pivot);
+      get_indices_of_non_zeros (row_to_factor, incides_need_update, except_pivot);
 
       const data_type pivot_inv = 1.0/pivot;
       const global_index_type n_row_need_update = incides_need_update.size();
@@ -350,12 +332,7 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
                   fill_in_level.set (i_row, j_col, new_fill_in_level);
                 }
             } // For each column need update
-          compute_discarded_value (i_row,
-                                   LU,
-                                   fill_in_level,
-                                   row_factored,
-                                   fill_in_threshold,
-                                   indicators[i_row]);
+          compute_discarded_value (i_row);
         } // For each row need update
     } // For each row in matrix
   return;
@@ -382,12 +359,3 @@ const DynamicMatrix &MDFILU::get_LU() const
 {
   return (LU);
 }
-
-// template get_indices_of_non_zeros<LA::MPI::SparseMatrix>;
-template
-void MDFILU::get_indices_of_non_zeros<DynamicMatrix> (
-  const DynamicMatrix &matrix,
-  const global_index_type row_to_factor,
-  const std::vector<flag_type> &row_factored,
-  std::vector<global_index_type> &incides_need_update,
-  const bool except_pivot);
