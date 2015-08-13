@@ -44,6 +44,7 @@ int main (int argc, char *argv[])
   // Test the program by multiply LU back
   // Ignore sparsity pattern fist.
   {
+    const data_type tolerance (1e-12);
     const unsigned int estimated_row_length (10);
     DynamicMatrix A (degree, degree, estimated_row_length);
     // Compute LD*U
@@ -67,7 +68,10 @@ int main (int argc, char *argv[])
             {
               value += LU.el (i_row,k) * LU.el (k,j_col);
             }
-          A.set (i_row, j_col, value);
+          if (std::abs (value) > tolerance)
+            {
+              A.set (i_row, j_col, value);
+            }
         }
     std::ofstream fout ("A.out");
     A.print (fout);
