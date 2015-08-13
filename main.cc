@@ -12,9 +12,7 @@ int main (int argc, char *argv[])
   Utilities::MPI::MPI_InitFinalize mpi_initialization (argc, argv, ::numbers::invalid_unsigned_int);
   const global_index_type degree (10);
   const unsigned int estimated_row_length (10);
-  LA::MPI::SparseMatrix system_matrix (degree, degree, /*max_entries_per_row*/estimated_row_length);
-  DynamicMatrix LU (degree, degree, /*max_entries_per_row*/estimated_row_length);
-  std::vector<global_index_type> permutation (degree);
+  SourceMatrix system_matrix (degree, degree, /*max_entries_per_row*/estimated_row_length);
 
   // Set value for system_matrix
   std::ifstream fin ("matrix.dat");
@@ -33,12 +31,12 @@ int main (int argc, char *argv[])
     system_matrix.print (fout);
     fout.close();
   }
-  MDF_reordering_and_ILU_factoring (system_matrix, LU, permutation);
+  MDFILU mdfilu (system_matrix, estimated_row_length, 20);
 
   // Out put LU
   {
     std::ofstream fout ("LU.out");
-    LU.print (fout);
+    mdfilu.get_LU().print (fout);
     fout.close();
   }
 
@@ -50,17 +48,17 @@ int main (int argc, char *argv[])
     // Compute LD*U
     for (global_index_type i=0; i<degree; ++i)
       {
-        const global_index_type i_row = permutation[i];
+        const global_index_type i_row = mdfilu.get_permutation()[i];
         for (global_index_type j=0; j<degree; ++j)
           {
-            const global_index_type j_col = permutation[j];
+            const global_index_type j_col = mdfilu.get_permutation()[j];
             data_type value = 0;
             global_index_type vmult_max_index = 0;
             // Diagonal values of L is always 1 thus not been stored.
             // Recover its effect manually.
             if (j>=i)
               {
-                value = LU.el (i_row,j_col);
+                value = mdfilu.get_LU().el (i_row,j_col);
                 vmult_max_index = i;
               }
             else
@@ -69,8 +67,8 @@ int main (int argc, char *argv[])
               }
             for (global_index_type k=0; k<vmult_max_index; ++k)
               {
-                const global_index_type k_permuted = permutation[k];
-                value += LU.el (i_row,k_permuted) * LU.el (k_permuted,j_col);
+                const global_index_type k_permuted = mdfilu.get_permutation()[k];
+                value += mdfilu.get_LU().el (i_row,k_permuted) * mdfilu.get_LU().el (k_permuted,j_col);
               }
             if (std::abs (value) > tolerance)
               {

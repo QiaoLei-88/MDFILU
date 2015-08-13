@@ -1,7 +1,36 @@
 
 #include "MDFILU.h"
 
-void Indicator::init()
+
+
+MDFILU::MDFILU (const SourceMatrix &matrix,
+                const global_index_type estimated_row_length_in,
+                const global_index_type fill_in_threshold_in)
+  :
+  degree (matrix.m()),
+  estimated_row_length_in (estimated_row_length_in),
+  fill_in_threshold (fill_in_threshold_in),
+  LU (degree,degree,estimated_row_length_in),
+  fill_in_level (degree,degree,degree),
+  permutation (degree, 0),
+  indicators (degree),
+  row_factored (degree, false)
+{
+  //initialize the LU matrix
+  LU.copy_from (matrix);
+  MDF_reordering_and_ILU_factoring();
+}
+
+MDFILU::~MDFILU()
+{
+  row_factored.clear();
+  indicators.clear();
+  permutation.clear();
+  fill_in_level.clear();
+  LU.clear();
+}
+
+void MDFILU::Indicator::init()
 {
   for (unsigned int i=0; i<N_INDICATOR; ++i)
     {
@@ -10,7 +39,7 @@ void Indicator::init()
   return;
 }
 
-int Indicator::operator- (const Indicator &op) const
+int MDFILU::Indicator::operator- (const Indicator &op) const
 {
   for (unsigned int i=0; i<N_INDICATOR; ++i)
     {
@@ -27,7 +56,7 @@ int Indicator::operator- (const Indicator &op) const
 }
 
 template<typename Matrix>
-void get_indices_of_non_zeros (
+void MDFILU::get_indices_of_non_zeros (
   const Matrix &matrix,
   const global_index_type row_to_factor,
   const std::vector<flag_type> &row_factored,
@@ -55,7 +84,7 @@ void get_indices_of_non_zeros (
 }
 
 
-void compute_discarded_value (
+void MDFILU::compute_discarded_value (
   const unsigned int row_to_factor,
   const DynamicMatrix &LU,
   const DynamicMatrix &fill_in_level,
@@ -141,7 +170,7 @@ void compute_discarded_value (
 
 // Determine the next row to be factored by finding out the one with minimum
 // indicator form rows that have not been factored.
-global_index_type find_min_discarded_value (
+global_index_type MDFILU::find_min_discarded_value (
   const std::vector<Indicator> &indicators,
   const std::vector<flag_type> &row_factored)
 {
@@ -172,26 +201,11 @@ global_index_type find_min_discarded_value (
 }
 
 
-void MDF_reordering_and_ILU_factoring (
-  const LA::MPI::SparseMatrix &system_matrix,
-  DynamicMatrix &LU,
-  std::vector<global_index_type> &permutation)
+void MDFILU::MDF_reordering_and_ILU_factoring()
 {
 #ifdef VERBOSE_OUTPUT
   std::ofstream debugStream ("debug.out");
 #endif
-  const global_index_type fill_in_threshold (20);
-  const global_index_type degree = system_matrix.m();
-  // Record fill-in level for all non-zero entries, we need this to compute
-  // level for new fill-ins.
-  // SparseMatrixEZ<double> fill_in_level (degree,degree,degree);
-  DynamicMatrix fill_in_level (degree,degree,degree);
-
-  //initialize the LU matrix
-  LU.copy_from (system_matrix);
-
-  std::vector<Indicator> indicators (degree);
-  std::vector<flag_type> row_factored (degree, false);
 
   // Initialize::BEGIN
   // Compute Initial fill in level
@@ -347,9 +361,31 @@ void MDF_reordering_and_ILU_factoring (
   return;
 }
 
+int MDFILU::apply (const NSVector &in, NSVector &out) const
+{
+  // Only a fake function
+  out = in;
+  return (0);
+}
+int MDFILU::apply_inverse (const NSVector &in, NSVector &out) const
+{
+  // Only a fake function
+  out = in;
+  return (0);
+}
+
+const std::vector<global_index_type> &MDFILU::get_permutation() const
+{
+  return (permutation);
+}
+const DynamicMatrix &MDFILU::get_LU() const
+{
+  return (LU);
+}
+
 // template get_indices_of_non_zeros<LA::MPI::SparseMatrix>;
 template
-void get_indices_of_non_zeros<DynamicMatrix> (
+void MDFILU::get_indices_of_non_zeros<DynamicMatrix> (
   const DynamicMatrix &matrix,
   const global_index_type row_to_factor,
   const std::vector<flag_type> &row_factored,
