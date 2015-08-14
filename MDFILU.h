@@ -6,6 +6,10 @@
 #include <deal.II/lac/sparse_matrix_ez.h>
 #include <deal.II/lac/vector.h>
 #include <deal.II/base/std_cxx11/array.h>
+#include <Epetra_Operator.h>
+#include <Epetra_Map.h>
+#include <Sacado.hpp>
+
 
 #include <fstream>
 
@@ -35,12 +39,16 @@ typedef double data_type;
 typedef Vector<data_type> MDFVector;
 typedef bool flag_type;
 
-class MDFILU
+class MDFILU : public Epetra_Operator
 {
 public:
   MDFILU (const SourceMatrix &matrix,
           const global_index_type estimated_row_length_in,
           const global_index_type fill_in_threshold_in);
+
+  int apply (const data_type *const in, data_type *const out) const;
+  int apply_inverse (const data_type *const in, data_type *const out) const;
+
   int apply (const MDFVector &in, MDFVector &out) const;
   int apply_inverse (const MDFVector &in, MDFVector &out) const;
 
@@ -49,6 +57,21 @@ public:
   const DynamicMatrix &get_LU() const;
   ~MDFILU();
 
+  // Virtual functions from Epetra_Operator
+
+  virtual int Apply (const Epetra_MultiVector &, Epetra_MultiVector &) const;
+  virtual int ApplyInverse (const Epetra_MultiVector &, Epetra_MultiVector &) const;
+  virtual double NormInf() const;
+  virtual bool UseTranspose() const;
+  virtual bool HasNormInf() const;
+
+  virtual const char *Label() const;
+
+  virtual const Epetra_Comm &Comm() const;
+  virtual const Epetra_Map &OperatorDomainMap() const;
+  virtual const Epetra_Map &OperatorRangeMap() const;
+
+  virtual int SetUseTranspose (const bool);
 
 private:
   const global_index_type invalid_index;
@@ -93,6 +116,16 @@ private:
   // with this row, i.e., for all k that a(i_row, k) \ne 0 and a(k, i_row) \ne 0.
   // That's why we need the flag array row_factored.
   std::vector<flag_type> row_factored;
+
+
+  // Data for Epetra_Operator interface
+  bool use_transpose;
+  const bool has_norm_infty;
+  const Epetra_Comm *epetra_comm;
+  const Epetra_Map operator_domain_map;
+  const Epetra_Map operator_range_map;
+
+  const static char label[];
 };
 
 #endif

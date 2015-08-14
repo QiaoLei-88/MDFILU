@@ -1,7 +1,7 @@
 
 #include "MDFILU.h"
 
-
+const char MDFILU::label[] = "Epetra_Operator_MDFILU";
 
 MDFILU::MDFILU (const SourceMatrix &matrix,
                 const global_index_type estimated_row_length_in,
@@ -17,7 +17,12 @@ MDFILU::MDFILU (const SourceMatrix &matrix,
   permute_logical_to_storage (degree, invalid_index),
   permuta_storage_to_logical (degree, invalid_index),
   indicators (degree),
-  row_factored (degree, false)
+  row_factored (degree, false),
+  use_transpose (false),
+  has_norm_infty (false),
+  epetra_comm (& (matrix.trilinos_matrix().Comm())),
+  operator_domain_map (matrix.trilinos_matrix().DomainMap()),
+  operator_range_map (matrix.trilinos_matrix().RangeMap())
 {
   //initialize the LU matrix
   LU.copy_from (matrix);
@@ -339,13 +344,8 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
 // This function is safe even @p in and @out is the same vector.
 // Because we only multiply the vector with upper and lower triangle
 // matrix in order, the passed vector value is never used again.
-int MDFILU::apply (const MDFVector &in, MDFVector &out) const
+int MDFILU::apply (const data_type *const in, data_type *const out) const
 {
-  Assert (in.size() == out.size(),
-          ExcDimensionMismatch (in.size(), out.size()));
-  Assert (in.size() == degree,
-          ExcDimensionMismatch (in.size(), degree));
-
   // Apply U to in
   for (global_index_type i=0; i<degree; ++i)
     {
@@ -390,23 +390,18 @@ int MDFILU::apply (const MDFVector &in, MDFVector &out) const
 
   return (0);
 }
-int MDFILU::apply_inverse (const MDFVector &in, MDFVector &out) const
+int MDFILU::apply_inverse (const data_type *const in, data_type *const out) const
 {
-  Assert (in.size() == out.size(),
-          ExcDimensionMismatch (in.size(), out.size()));
-  Assert (in.size() == degree,
-          ExcDimensionMismatch (in.size(), degree));
-
   // Apply L^-1 to in
-  for (global_index_type i=0; i<degree; ++i)
+  for (global_index_type i=0; i<this->degree; ++i)
     {
       // Forward substitution
       const global_index_type i_row = permute_logical_to_storage[i];
 
       // Diagonal value of L is alway 1, so we can just accumulate on out[i_row].
       out[i_row] = in[i_row];
-      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
-           iter_col < LU.end (i_row); ++iter_col)
+      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
+           iter_col < this->LU.end (i_row); ++iter_col)
         {
           const global_index_type j_col = iter_col->column();
           const global_index_type j = permuta_storage_to_logical[j_col];
@@ -419,15 +414,15 @@ int MDFILU::apply_inverse (const MDFVector &in, MDFVector &out) const
     }
 
   // Apply U^-1 to the result of U*in
-  for (global_index_type ii=degree; ii>0; --ii)
+  for (global_index_type ii=this->degree; ii>0; --ii)
     {
       // Backward substitution; be careful on "ii-1" because ii is unsigned
       const global_index_type i = ii - 1;
       const global_index_type i_row = permute_logical_to_storage[i];
 
       data_type pivot = 0.0;
-      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
-           iter_col < LU.end (i_row); ++iter_col)
+      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
+           iter_col < this->LU.end (i_row); ++iter_col)
         {
           const global_index_type j_col = iter_col->column();
           const global_index_type j = permuta_storage_to_logical[j_col];
@@ -448,11 +443,101 @@ int MDFILU::apply_inverse (const MDFVector &in, MDFVector &out) const
   return (0);
 }
 
+int MDFILU::apply (const MDFVector &in, MDFVector &out) const
+{
+  Assert (in.size() == out.size(),
+          ExcDimensionMismatch (in.size(), out.size()));
+  Assert (in.size() == degree,
+          ExcDimensionMismatch (in.size(), this->degree));
+
+  return (this->apply (in.begin(), out.begin()));
+}
+
+int MDFILU::apply_inverse (const MDFVector &in, MDFVector &out) const
+{
+  Assert (in.size() == out.size(),
+          ExcDimensionMismatch (in.size(), out.size()));
+  Assert (in.size() == degree,
+          ExcDimensionMismatch (in.size(), this->degree));
+
+  return (this->apply_inverse (in.begin(), out.begin()));
+}
+
+
 const std::vector<global_index_type> &MDFILU::get_permutation() const
 {
-  return (permute_logical_to_storage);
+  return (this->permute_logical_to_storage);
 }
 const DynamicMatrix &MDFILU::get_LU() const
 {
-  return (LU);
+  return (this->LU);
+}
+
+// Virtual functions from Epetra_Operator
+
+int MDFILU::Apply (const Epetra_MultiVector &in, Epetra_MultiVector &out) const
+{
+  Assert (in.NumVectors() == out.NumVectors(),
+          ExcDimensionMismatch (in.NumVectors(), out.NumVectors()));
+  const global_index_type n_vectors = in.NumVectors();
+  for (global_index_type i=0; i<n_vectors; ++i)
+    {
+      this->apply (in[i], out[i]);
+    }
+  return (0);
+}
+
+
+int MDFILU::ApplyInverse (const Epetra_MultiVector &in, Epetra_MultiVector &out) const
+{
+  Assert (in.NumVectors() == out.NumVectors(),
+          ExcDimensionMismatch (in.NumVectors(), out.NumVectors()));
+
+  const global_index_type n_vectors = in.NumVectors();
+  for (global_index_type i=0; i<n_vectors; ++i)
+    {
+      this->apply_inverse (in[i], out[i]);
+    }
+  return (0);
+}
+
+double MDFILU::NormInf() const
+{
+  return (this->very_large_number);
+}
+
+bool MDFILU::HasNormInf() const
+{
+  return (this->has_norm_infty);
+}
+
+bool MDFILU::UseTranspose() const
+{
+  return (this->use_transpose);
+}
+
+const char *MDFILU::Label() const
+{
+  return (this->label);
+}
+
+int MDFILU::SetUseTranspose (const bool in)
+{
+  this->use_transpose = in;
+  return (0);
+}
+
+const Epetra_Comm &MDFILU::Comm() const
+{
+  return (* (this->epetra_comm));
+}
+
+const Epetra_Map &MDFILU::OperatorDomainMap() const
+{
+  return (this->operator_domain_map);
+}
+
+const Epetra_Map &MDFILU::OperatorRangeMap() const
+{
+  return (this->operator_range_map);
 }
