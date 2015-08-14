@@ -7,13 +7,15 @@ MDFILU::MDFILU (const SourceMatrix &matrix,
                 const global_index_type estimated_row_length_in,
                 const global_index_type fill_in_threshold_in)
   :
+  invalid_index (static_cast<global_index_type> (-1)),
+  very_large_number (1.988e+211),
   degree (matrix.m()),
   estimated_row_length_in (estimated_row_length_in),
   fill_in_threshold (fill_in_threshold_in),
   LU (degree,degree,estimated_row_length_in),
   fill_in_level (degree,degree,degree),
-  permute_logical_to_storage (degree, 0),
-  permuta_storage_to_logical (degree, 0),
+  permute_logical_to_storage (degree, invalid_index),
+  permuta_storage_to_logical (degree, invalid_index),
   indicators (degree),
   row_factored (degree, false)
 {

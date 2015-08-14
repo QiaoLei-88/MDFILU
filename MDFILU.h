@@ -51,6 +51,8 @@ public:
 
 
 private:
+  const global_index_type invalid_index;
+  const data_type very_large_number;
 
 #define N_INDICATOR 3
   class Indicator: public std_cxx11::array<data_type,N_INDICATOR>
