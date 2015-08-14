@@ -26,7 +26,12 @@ MDFILU::MDFILU (const SourceMatrix &matrix,
 {
   //initialize the LU matrix
   LU.copy_from (matrix);
+
   MDF_reordering_and_ILU_factoring();
+#ifdef UseTrilinosMatrix
+  LU.compress (VectorOperation::insert);
+  fill_in_level.compress (VectorOperation::insert);
+#endif
 }
 
 MDFILU::~MDFILU()

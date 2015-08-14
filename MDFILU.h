@@ -32,7 +32,14 @@ typedef LA::MPI::Vector NSVector;
 #define __NSVector__DEFINED__
 #endif
 typedef LA::MPI::SparseMatrix SourceMatrix;
+
+// #define UseTrilinosMatrix
+#ifdef UseTrilinosMatrix
+typedef LA::MPI::SparseMatrix DynamicMatrix;
+#else
 typedef SparseMatrixEZ<double> DynamicMatrix;
+#endif
+
 typedef unsigned short local_index_type;
 typedef unsigned long global_index_type;
 typedef double data_type;
