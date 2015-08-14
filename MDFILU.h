@@ -79,7 +79,11 @@ private:
   // SparseMatrixEZ<double> fill_in_level (degree,degree,degree);
   DynamicMatrix fill_in_level;
 
-  std::vector<global_index_type> permutation;
+  // Where is the k-th row and column in LU
+  std::vector<global_index_type> permute_logical_to_storage;
+  // For k-th row and column in LU, where is it in the permuted matrix
+  std::vector<global_index_type> permuta_storage_to_logical;
+
   std::vector<Indicator> indicators;
 
   // During factoring procedure, we need to go through all un-factored entries that connected

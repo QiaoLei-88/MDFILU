@@ -12,7 +12,8 @@ MDFILU::MDFILU (const SourceMatrix &matrix,
   fill_in_threshold (fill_in_threshold_in),
   LU (degree,degree,estimated_row_length_in),
   fill_in_level (degree,degree,degree),
-  permutation (degree, 0),
+  permute_logical_to_storage (degree, 0),
+  permuta_storage_to_logical (degree, 0),
   indicators (degree),
   row_factored (degree, false)
 {
@@ -25,7 +26,7 @@ MDFILU::~MDFILU()
 {
   row_factored.clear();
   indicators.clear();
-  permutation.clear();
+  permute_logical_to_storage.clear();
   fill_in_level.clear();
   LU.clear();
 }
@@ -281,7 +282,8 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
 #endif
 
       row_factored[row_to_factor] = true;
-      permutation[n_row_factored] = row_to_factor;
+      permute_logical_to_storage[n_row_factored] = row_to_factor;
+      permuta_storage_to_logical[row_to_factor] = n_row_factored;
 
 #ifdef VERBOSE_OUTPUT
       debugStream << "row_to_factor: " << row_to_factor << std::endl;
@@ -353,7 +355,7 @@ int MDFILU::apply_inverse (const NSVector &in, NSVector &out) const
 
 const std::vector<global_index_type> &MDFILU::get_permutation() const
 {
-  return (permutation);
+  return (permute_logical_to_storage);
 }
 const DynamicMatrix &MDFILU::get_LU() const
 {
