@@ -32,6 +32,7 @@ typedef SparseMatrixEZ<double> DynamicMatrix;
 typedef unsigned short local_index_type;
 typedef unsigned long global_index_type;
 typedef double data_type;
+typedef Vector<data_type> MDFVector;
 typedef bool flag_type;
 
 class MDFILU
@@ -40,7 +41,7 @@ public:
   MDFILU (const SourceMatrix &matrix,
           const global_index_type estimated_row_length_in,
           const global_index_type fill_in_threshold_in);
-  int apply (const NSVector &in, NSVector &out) const;
+  int apply (const MDFVector &in, MDFVector &out) const;
   int apply_inverse (const NSVector &in, NSVector &out) const;
 
   // Interface for debug code

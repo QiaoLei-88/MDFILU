@@ -340,10 +340,59 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
   return;
 }
 
-int MDFILU::apply (const NSVector &in, NSVector &out) const
+
+// This function is safe even @p in and @out is the same vector.
+// Because we only multiply the vector with upper and lower triangle
+// matrix in order, the passed vector value is never used again.
+int MDFILU::apply (const MDFVector &in, MDFVector &out) const
 {
-  // Only a fake function
-  out = in;
+  Assert (in.size() == out.size(),
+          ExcDimensionMismatch (in.size(), out.size()));
+  Assert (in.size() == degree,
+          ExcDimensionMismatch (in.size(), degree));
+
+  // Apply U to in
+  for (global_index_type i=0; i<degree; ++i)
+    {
+      // Forward sweep
+      const global_index_type i_row = permute_logical_to_storage[i];
+
+      data_type value = 0;
+      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
+           iter_col < LU.end (i_row); ++iter_col)
+        {
+          const global_index_type j_col = iter_col->column();
+          const global_index_type j = permuta_storage_to_logical[j_col];
+          if (j >= i)
+            {
+              // Upper triangle only
+              value += iter_col->value() * in[j_col];
+            }
+        }
+      out[i_row] = value;
+    }
+
+  // Apply L to the result of U*in
+  for (global_index_type ii=degree; ii>0; --ii)
+    {
+      // backward sweep; be careful on "ii-1" because ii is unsigned
+      const global_index_type i = ii - 1;
+      const global_index_type i_row = permute_logical_to_storage[i];
+
+      // Diagonal value of L is alway 1, so we can just accumulate on out[i].
+      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
+           iter_col < LU.end (i_row); ++iter_col)
+        {
+          const global_index_type j_col = iter_col->column();
+          const global_index_type j = permuta_storage_to_logical[j_col];
+          if (j < i)
+            {
+              // Lower triangle only
+              out[i_row] += iter_col->value() * out[j_col];
+            }
+        }
+    }
+
   return (0);
 }
 int MDFILU::apply_inverse (const NSVector &in, NSVector &out) const
