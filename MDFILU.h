@@ -42,7 +42,7 @@ public:
           const global_index_type estimated_row_length_in,
           const global_index_type fill_in_threshold_in);
   int apply (const MDFVector &in, MDFVector &out) const;
-  int apply_inverse (const NSVector &in, NSVector &out) const;
+  int apply_inverse (const MDFVector &in, MDFVector &out) const;
 
   // Interface for debug code
   const std::vector<global_index_type> &get_permutation() const;
