@@ -81,7 +81,7 @@ int main (int argc, char *argv[])
     fout.close();
   }
 
-  // Apply LU to a vector
+  // Apply LU and (LU)^-1 to a vector
   MDFVector v (degree);
   {
     const data_type a[degree] = {6, 10, 9, 5, 2, 5, 7, 3, 6, 3};
@@ -98,6 +98,16 @@ int main (int argc, char *argv[])
     fout << "Vector v:" << std::endl;
     fout << v;
     fout << "Vector (LU)*v:" << std::endl;
+    fout << o << std::endl;
+    fout.close();
+  }
+  {
+    MDFVector o (v);
+    mdfilu.apply_inverse (o,o);
+    std::ofstream fout ("apply.out", std::fstream::app);
+    fout << "Vector v:" << std::endl;
+    fout << v;
+    fout << "Vector ((LU)^-1)*v:" << std::endl;
     fout << o << std::endl;
     fout.close();
   }
