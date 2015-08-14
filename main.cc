@@ -40,8 +40,8 @@ int main (int argc, char *argv[])
     fout.close();
   }
 
-  // Test the program by multiply LU back
-  // Ignore sparsity pattern fist.
+  // Test the MDFILU class by multiplying LU back
+  // For now the sparsity pattern is ignored.
   {
     const data_type tolerance (1e-12);
     DynamicMatrix A (degree, degree, estimated_row_length);
@@ -80,7 +80,7 @@ int main (int argc, char *argv[])
     A.print (fout);
     fout.close();
   }
-  // Make preconditioner from LU
+
 // #ifdef VERBOSE_OUTPUT
 //   debugStream.close();
 // #endif
