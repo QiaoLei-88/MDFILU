@@ -131,13 +131,6 @@ void MDFILU::compute_discarded_value (const unsigned int row_to_factor)
           const global_index_type j_col = incides_need_update[j];
           // Check fill-in level
           const data_type new_fill_in_level = fill_in_level.el (i_row, j_col);
-#ifdef VERBOSE_OUTPUT
-          std::ofstream f_level ("fill_level_verbos.out", std::fstream::app);
-          f_level << row_to_factor << "\t"
-                  << i_row << "\t" << j_col << "\t"
-                  << fill_in_level.el (i_row, j_col) << std::endl;
-          f_level.close();
-#endif
           if (new_fill_in_level == 0.0 /* fill in level for new entry*/)
             {
               ++return_value[prior_n_fill];
