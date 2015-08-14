@@ -81,6 +81,27 @@ int main (int argc, char *argv[])
     fout.close();
   }
 
+  // Apply LU to a vector
+  MDFVector v (degree);
+  {
+    const data_type a[degree] = {6, 10, 9, 5, 2, 5, 7, 3, 6, 3};
+
+    for (global_index_type i=0; i<degree; ++i)
+      {
+        v[i] = a[i];
+      }
+  }
+  {
+    MDFVector o (v);
+    mdfilu.apply (o,o);
+    std::ofstream fout ("apply.out");
+    fout << "Vector v:" << std::endl;
+    fout << v;
+    fout << "Vector (LU)*v:" << std::endl;
+    fout << o << std::endl;
+    fout.close();
+  }
+
 // #ifdef VERBOSE_OUTPUT
 //   debugStream.close();
 // #endif
