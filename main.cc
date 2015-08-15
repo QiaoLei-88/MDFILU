@@ -123,6 +123,16 @@ int main (int argc, char *argv[])
     fout << o << std::endl;
     fout.close();
   }
+  {
+    MDFVector o (v);
+    mdfilu.apply_inverse (o,o);
+    std::ofstream fout ("apply.out", std::fstream::app);
+    fout << "Vector v:" << std::endl;
+    fout << v;
+    fout << "Vector (((LU)^-1)^T)*v:" << std::endl;
+    fout << o << std::endl;
+    fout.close();
+  }
 
 // #ifdef VERBOSE_OUTPUT
 //   debugStream.close();
