@@ -459,14 +459,14 @@ int MDFILU::apply_transpose (const data_type *const in, data_type *const out) co
 int MDFILU::apply_inverse_transpose (const data_type *const in, data_type *const out) const
 {
   // Apply (U^T)^-1 to in
-  for (global_index_type i=0; i<this->degree; ++i)
+  for (global_index_type i=0; i<degree; ++i)
     {
       // Forward substitution
       const global_index_type i_row = permute_logical_to_storage[i];
 
       // Update vector value of current row for using below
-      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
-           iter_col < this->LU.end (i_row); ++iter_col)
+      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
+           iter_col < LU.end (i_row); ++iter_col)
         {
           const global_index_type j_col = iter_col->column();
           const global_index_type j = permuta_storage_to_logical[j_col];
@@ -479,8 +479,8 @@ int MDFILU::apply_inverse_transpose (const data_type *const in, data_type *const
             }
         }
 
-      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
-           iter_col < this->LU.end (i_row); ++iter_col)
+      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
+           iter_col < LU.end (i_row); ++iter_col)
         {
           const global_index_type j_col = iter_col->column();
           const global_index_type j = permuta_storage_to_logical[j_col];
@@ -493,14 +493,14 @@ int MDFILU::apply_inverse_transpose (const data_type *const in, data_type *const
     }
 
   // Apply (L^T)^-1 to the result of ((U^T)^-1)*in
-  for (global_index_type ii=this->degree; ii>0; --ii)
+  for (global_index_type ii=degree; ii>0; --ii)
     {
       // Backward substitution; be careful on "ii-1" because ii is unsigned
       const global_index_type i = ii - 1;
       const global_index_type i_row = permute_logical_to_storage[i];
 
-      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
-           iter_col < this->LU.end (i_row); ++iter_col)
+      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
+           iter_col < LU.end (i_row); ++iter_col)
         {
           const global_index_type j_col = iter_col->column();
           const global_index_type j = permuta_storage_to_logical[j_col];
@@ -518,15 +518,16 @@ int MDFILU::apply_inverse_transpose (const data_type *const in, data_type *const
 int MDFILU::apply_inverse (const data_type *const in, data_type *const out) const
 {
   // Apply L^-1 to in
-  for (global_index_type i=0; i<this->degree; ++i)
+  for (global_index_type i=0; i<degree; ++i)
     {
       // Forward substitution
       const global_index_type i_row = permute_logical_to_storage[i];
 
       // Diagonal value of L is alway 1, so we can just accumulate on out[i_row].
       out[i_row] = in[i_row];
-      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
-           iter_col < this->LU.end (i_row); ++iter_col)
+
+      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
+           iter_col < LU.end (i_row); ++iter_col)
         {
           const global_index_type j_col = iter_col->column();
           const global_index_type j = permuta_storage_to_logical[j_col];
@@ -539,15 +540,16 @@ int MDFILU::apply_inverse (const data_type *const in, data_type *const out) cons
     }
 
   // Apply U^-1 to the result of U*in
-  for (global_index_type ii=this->degree; ii>0; --ii)
+  for (global_index_type ii=degree; ii>0; --ii)
     {
       // Backward substitution; be careful on "ii-1" because ii is unsigned
       const global_index_type i = ii - 1;
       const global_index_type i_row = permute_logical_to_storage[i];
 
       data_type pivot = 0.0;
-      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
-           iter_col < this->LU.end (i_row); ++iter_col)
+
+      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
+           iter_col < LU.end (i_row); ++iter_col)
         {
           const global_index_type j_col = iter_col->column();
           const global_index_type j = permuta_storage_to_logical[j_col];
@@ -573,15 +575,15 @@ int MDFILU::apply (const Vector<data_type> &in, Vector<data_type> &out) const
   Assert (in.size() == out.size(),
           ExcDimensionMismatch (in.size(), out.size()));
   Assert (in.size() == degree,
-          ExcDimensionMismatch (in.size(), this->degree));
+          ExcDimensionMismatch (in.size(), degree));
 
-  if (this->use_transpose)
+  if (use_transpose)
     {
-      return (this->apply_transpose (in.begin(), out.begin()));
+      return (apply_transpose (in.begin(), out.begin()));
     }
   else
     {
-      return (this->apply (in.begin(), out.begin()));
+      return (apply (in.begin(), out.begin()));
     }
 }
 
@@ -590,15 +592,15 @@ int MDFILU::apply_inverse (const Vector<data_type> &in, Vector<data_type> &out) 
   Assert (in.size() == out.size(),
           ExcDimensionMismatch (in.size(), out.size()));
   Assert (in.size() == degree,
-          ExcDimensionMismatch (in.size(), this->degree));
+          ExcDimensionMismatch (in.size(), degree));
 
-  if (this->use_transpose)
+  if (use_transpose)
     {
-      return (this->apply_inverse_transpose (in.begin(), out.begin()));
+      return (apply_inverse_transpose (in.begin(), out.begin()));
     }
   else
     {
-      return (this->apply_inverse (in.begin(), out.begin()));
+      return (apply_inverse (in.begin(), out.begin()));
     }
 
 
@@ -607,11 +609,11 @@ int MDFILU::apply_inverse (const Vector<data_type> &in, Vector<data_type> &out) 
 
 const std::vector<global_index_type> &MDFILU::get_permutation() const
 {
-  return (this->permute_logical_to_storage);
+  return (permute_logical_to_storage);
 }
 const DynamicMatrix &MDFILU::get_LU() const
 {
-  return (this->LU);
+  return (LU);
 }
 
 // Virtual functions from Epetra_Operator
@@ -622,18 +624,18 @@ int MDFILU::Apply (const Epetra_MultiVector &in, Epetra_MultiVector &out) const
           ExcDimensionMismatch (in.NumVectors(), out.NumVectors()));
   const global_index_type n_vectors = in.NumVectors();
 
-  if (this->use_transpose)
+  if (use_transpose)
     {
       for (global_index_type i=0; i<n_vectors; ++i)
         {
-          this->apply_transpose (in[i], out[i]);
+          apply_transpose (in[i], out[i]);
         }
     }
   else
     {
       for (global_index_type i=0; i<n_vectors; ++i)
         {
-          this->apply (in[i], out[i]);
+          apply (in[i], out[i]);
         }
     }
 
@@ -648,18 +650,18 @@ int MDFILU::ApplyInverse (const Epetra_MultiVector &in, Epetra_MultiVector &out)
 
   const global_index_type n_vectors = in.NumVectors();
 
-  if (this->use_transpose)
+  if (use_transpose)
     {
       for (global_index_type i=0; i<n_vectors; ++i)
         {
-          this->apply_inverse_transpose (in[i], out[i]);
+          apply_inverse_transpose (in[i], out[i]);
         }
     }
   else
     {
       for (global_index_type i=0; i<n_vectors; ++i)
         {
-          this->apply_inverse (in[i], out[i]);
+          apply_inverse (in[i], out[i]);
         }
     }
 
@@ -668,41 +670,41 @@ int MDFILU::ApplyInverse (const Epetra_MultiVector &in, Epetra_MultiVector &out)
 
 double MDFILU::NormInf() const
 {
-  return (this->very_large_number);
+  return (very_large_number);
 }
 
 bool MDFILU::HasNormInf() const
 {
-  return (this->has_norm_infty);
+  return (has_norm_infty);
 }
 
 bool MDFILU::UseTranspose() const
 {
-  return (this->use_transpose);
+  return (use_transpose);
 }
 
 const char *MDFILU::Label() const
 {
-  return (this->label);
+  return (label);
 }
 
 int MDFILU::SetUseTranspose (const bool in)
 {
-  this->use_transpose = in;
+  use_transpose = in;
   return (0);
 }
 
 const Epetra_Comm &MDFILU::Comm() const
 {
-  return (* (this->epetra_comm));
+  return (* (epetra_comm));
 }
 
 const Epetra_Map &MDFILU::OperatorDomainMap() const
 {
-  return (this->operator_domain_map);
+  return (operator_domain_map);
 }
 
 const Epetra_Map &MDFILU::OperatorRangeMap() const
 {
-  return (this->operator_range_map);
+  return (operator_range_map);
 }
