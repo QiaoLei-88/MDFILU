@@ -91,6 +91,7 @@ int main (int argc, char *argv[])
         v[i] = a[i];
       }
   }
+//--------- Deal.II native Vector ---------//
   {
     MDFVector o (v);
     mdfilu.apply (o,o);
@@ -133,6 +134,80 @@ int main (int argc, char *argv[])
     fout << o << std::endl;
     fout.close();
   }
+//[END]// //--------- Deal.II native Vector ---------//
+//--------- Deal.II wrapped Trilinos Vector ---------//
+  mdfilu.SetUseTranspose (false);
+  {
+    NSVector o;
+    o = v;
+    mdfilu.apply (o,o);
+    std::ofstream fout ("apply.out", std::fstream::app);
+    fout << "Vector v:" << std::endl;
+    fout << v;
+    fout << "NSVector (LU)*v:" << std::endl;
+    fout.precision (3);
+    fout << std::scientific;
+    for (global_index_type i=0; i<degree; ++i)
+      {
+        fout << o[i] << ' ';
+      }
+    fout << std::endl << std::endl;
+    fout.close();
+  }
+  {
+    NSVector o;
+    o = v;
+    mdfilu.apply_inverse (o,o);
+    std::ofstream fout ("apply.out", std::fstream::app);
+    fout << "Vector v:" << std::endl;
+    fout << v;
+    fout << "NSVector ((LU)^-1)*v:" << std::endl;
+    fout.precision (3);
+    fout << std::scientific;
+    for (global_index_type i=0; i<degree; ++i)
+      {
+        fout << o[i] << ' ';
+      }
+    fout << std::endl << std::endl;
+    fout.close();
+  }
+
+  mdfilu.SetUseTranspose (true);
+  {
+    NSVector o;
+    o = v;
+    mdfilu.apply (o,o);
+    std::ofstream fout ("apply.out", std::fstream::app);
+    fout << "Vector v:" << std::endl;
+    fout << v;
+    fout << "NSVector ((LU)^T)*v:" << std::endl;
+    fout.precision (3);
+    fout << std::scientific;
+    for (global_index_type i=0; i<degree; ++i)
+      {
+        fout << o[i] << ' ';
+      }
+    fout << std::endl << std::endl;
+    fout.close();
+  }
+  {
+    NSVector o;
+    o = v;
+    mdfilu.apply_inverse (o,o);
+    std::ofstream fout ("apply.out", std::fstream::app);
+    fout << "Vector v:" << std::endl;
+    fout << v;
+    fout << "NSVector (((LU)^-1)^T)*v:" << std::endl;
+    fout.precision (3);
+    fout << std::scientific;
+    for (global_index_type i=0; i<degree; ++i)
+      {
+        fout << o[i] << ' ';
+      }
+    fout << std::endl << std::endl;
+    fout.close();
+  }
+//[END]// //--------- Deal.II wrapped Trilinos Vector ---------//
 
 // #ifdef VERBOSE_OUTPUT
 //   debugStream.close();
