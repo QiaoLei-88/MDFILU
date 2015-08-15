@@ -56,6 +56,9 @@ public:
   int apply (const Vector<data_type> &in, Vector<data_type> &out) const;
   int apply_inverse (const Vector<data_type> &in, Vector<data_type> &out) const;
 
+  int apply (const NSVector &in, NSVector &out) const;
+  int apply_inverse (const NSVector &in, NSVector &out) const;
+
   // Interface for debug code
   const std::vector<global_index_type> &get_permutation() const;
   const DynamicMatrix &get_LU() const;

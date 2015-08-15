@@ -604,6 +604,27 @@ int MDFILU::apply_inverse (const Vector<data_type> &in, Vector<data_type> &out) 
     }
 }
 
+//------------------------------//------------------------------
+// Interface to deal.II Trilinos vector wrapper
+int MDFILU::apply (const NSVector &in, NSVector &out) const
+{
+  Assert (in.size() == out.size(),
+          ExcDimensionMismatch (in.size(), out.size()));
+  Assert (in.size() == degree,
+          ExcDimensionMismatch (in.size(), degree));
+
+  return (Apply (in.trilinos_vector(), out.trilinos_vector()));
+}
+
+int MDFILU::apply_inverse (const NSVector &in, NSVector &out) const
+{
+  Assert (in.size() == out.size(),
+          ExcDimensionMismatch (in.size(), out.size()));
+  Assert (in.size() == degree,
+          ExcDimensionMismatch (in.size(), degree));
+  return (ApplyInverse (in.trilinos_vector(), out.trilinos_vector()));
+}
+//------------------------------//------------------------------
 
 const std::vector<global_index_type> &MDFILU::get_permutation() const
 {
