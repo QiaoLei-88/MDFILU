@@ -47,6 +47,8 @@ public:
           const global_index_type fill_in_threshold_in);
 
   int apply (const data_type *const in, data_type *const out) const;
+  int apply_transpose (const data_type *const in, data_type *const out) const;
+
   int apply_inverse (const data_type *const in, data_type *const out) const;
 
   // Dedicated interface to dealii Vector<double>

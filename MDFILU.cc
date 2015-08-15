@@ -391,6 +391,72 @@ int MDFILU::apply (const data_type *const in, data_type *const out) const
 
   return (0);
 }
+
+int MDFILU::apply_transpose (const data_type *const in, data_type *const out) const
+{
+
+  // Apply L^T to in
+  for (global_index_type i=0; i<degree; ++i)
+    {
+      // Forward sweep
+      const global_index_type i_row = permute_logical_to_storage[i];
+
+      // Diagonal value of L is alway 1, so we can just accumulate on out[i].
+      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
+           iter_col < LU.end (i_row); ++iter_col)
+        {
+          const global_index_type j_col = iter_col->column();
+          const global_index_type j = permuta_storage_to_logical[j_col];
+          if (j < i)
+            {
+              // Lower triangle only
+              // Because the i-loop goes up from i=0, all j<i must have experienced
+              // j==i in previous i-loop, with the assumption that diagonal entry
+              // exists in all rows. So it is save to use += here.
+              out[j_col] += iter_col->value() * in[i_row];
+            }
+          else if (j == i)
+            {
+              out[i_row] = in[i_row];
+            }
+        }
+    }
+
+  // Apply U^T to the result of (L^T)*in
+  for (global_index_type ii=degree; ii>0; --ii)
+    {
+      // backward sweep; be careful on "ii-1" because ii is unsigned
+      const global_index_type i = ii - 1;
+      const global_index_type i_row = permute_logical_to_storage[i];
+
+      data_type pivot;
+      for (typename DynamicMatrix::const_iterator iter_col = LU.begin (i_row);
+           iter_col < LU.end (i_row); ++iter_col)
+        {
+          const global_index_type j_col = iter_col->column();
+          const global_index_type j = permuta_storage_to_logical[j_col];
+          if (j > i)
+            {
+              // Upper triangle only
+              // Because the i-loop goes down from top, all j>i must have experienced
+              // j==i in previous i-loop, with the assumption that diagonal entry
+              // exists in all rows. So it is save to use += here.
+              out[j_col] += iter_col->value() * out[i_row];
+            }
+          else if (j == i)
+            {
+              // We cannot overwrite out[i_row] immediately because it is used above
+              // and our matrix is permuted. We don't know which if branch comes first.
+              pivot = iter_col->value();
+            }
+        }
+      out[i_row] *= pivot;
+    }
+
+  return (0);
+}
+
+
 int MDFILU::apply_inverse (const data_type *const in, data_type *const out) const
 {
   // Apply L^-1 to in
@@ -450,8 +516,14 @@ int MDFILU::apply (const Vector<data_type> &in, Vector<data_type> &out) const
           ExcDimensionMismatch (in.size(), out.size()));
   Assert (in.size() == degree,
           ExcDimensionMismatch (in.size(), this->degree));
-
-  return (this->apply (in.begin(), out.begin()));
+  if (this->use_transpose)
+    {
+      return (this->apply_transpose (in.begin(), out.begin()));
+    }
+  else
+    {
+      return (this->apply (in.begin(), out.begin()));
+    }
 }
 
 int MDFILU::apply_inverse (const Vector<data_type> &in, Vector<data_type> &out) const
@@ -481,10 +553,22 @@ int MDFILU::Apply (const Epetra_MultiVector &in, Epetra_MultiVector &out) const
   Assert (in.NumVectors() == out.NumVectors(),
           ExcDimensionMismatch (in.NumVectors(), out.NumVectors()));
   const global_index_type n_vectors = in.NumVectors();
-  for (global_index_type i=0; i<n_vectors; ++i)
+
+  if (this->use_transpose)
     {
-      this->apply (in[i], out[i]);
+      for (global_index_type i=0; i<n_vectors; ++i)
+        {
+          this->apply_transpose (in[i], out[i]);
+        }
     }
+  else
+    {
+      for (global_index_type i=0; i<n_vectors; ++i)
+        {
+          this->apply (in[i], out[i]);
+        }
+    }
+
   return (0);
 }
 
