@@ -112,6 +112,18 @@ int main (int argc, char *argv[])
     fout.close();
   }
 
+  mdfilu.SetUseTranspose (true);
+  {
+    MDFVector o (v);
+    mdfilu.apply (o,o);
+    std::ofstream fout ("apply.out", std::fstream::app);
+    fout << "Vector v:" << std::endl;
+    fout << v;
+    fout << "Vector ((LU)^T)*v:" << std::endl;
+    fout << o << std::endl;
+    fout.close();
+  }
+
 // #ifdef VERBOSE_OUTPUT
 //   debugStream.close();
 // #endif
