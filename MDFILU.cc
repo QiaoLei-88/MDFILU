@@ -306,6 +306,7 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
 
           // Update current column, i.e., lower triangle part
           const data_type value = LU.el (i_row, row_to_factor);
+
           LU.set (i_row,row_to_factor, value*pivot_inv);
           // Update the remaining matrix
           for (global_index_type j=0; j<n_row_need_update; ++j)
@@ -443,7 +444,7 @@ int MDFILU::apply_inverse (const data_type *const in, data_type *const out) cons
   return (0);
 }
 
-int MDFILU::apply (const MDFVector &in, MDFVector &out) const
+int MDFILU::apply (const Vector<data_type> &in, Vector<data_type> &out) const
 {
   Assert (in.size() == out.size(),
           ExcDimensionMismatch (in.size(), out.size()));
@@ -453,7 +454,7 @@ int MDFILU::apply (const MDFVector &in, MDFVector &out) const
   return (this->apply (in.begin(), out.begin()));
 }
 
-int MDFILU::apply_inverse (const MDFVector &in, MDFVector &out) const
+int MDFILU::apply_inverse (const Vector<data_type> &in, Vector<data_type> &out) const
 {
   Assert (in.size() == out.size(),
           ExcDimensionMismatch (in.size(), out.size()));

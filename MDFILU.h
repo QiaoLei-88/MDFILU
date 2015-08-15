@@ -49,8 +49,9 @@ public:
   int apply (const data_type *const in, data_type *const out) const;
   int apply_inverse (const data_type *const in, data_type *const out) const;
 
-  int apply (const MDFVector &in, MDFVector &out) const;
-  int apply_inverse (const MDFVector &in, MDFVector &out) const;
+  // Dedicated interface to dealii Vector<double>
+  int apply (const Vector<data_type> &in, Vector<data_type> &out) const;
+  int apply_inverse (const Vector<data_type> &in, Vector<data_type> &out) const;
 
   // Interface for debug code
   const std::vector<global_index_type> &get_permutation() const;
