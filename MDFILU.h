@@ -6,10 +6,10 @@
 #include <deal.II/lac/sparse_matrix_ez.h>
 #include <deal.II/lac/vector.h>
 #include <deal.II/base/std_cxx11/array.h>
+DEAL_II_DISABLE_EXTRA_DIAGNOSTICS
 #include <Epetra_Operator.h>
-#include <Epetra_Map.h>
 #include <Sacado.hpp>
-
+DEAL_II_ENABLE_EXTRA_DIAGNOSTICS
 
 #include <fstream>
 
