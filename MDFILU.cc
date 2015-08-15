@@ -602,8 +602,6 @@ int MDFILU::apply_inverse (const Vector<data_type> &in, Vector<data_type> &out) 
     {
       return (apply_inverse (in.begin(), out.begin()));
     }
-
-
 }
 
 
