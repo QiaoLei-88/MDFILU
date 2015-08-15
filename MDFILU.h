@@ -98,7 +98,7 @@ private:
 
 
   const global_index_type degree;
-  const global_index_type estimated_row_length_in;
+  const global_index_type estimated_row_length;
   const global_index_type fill_in_threshold;
   DynamicMatrix LU;
   // Record fill-in level for all non-zero entries, we need this to compute
