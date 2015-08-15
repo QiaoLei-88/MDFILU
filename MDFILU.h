@@ -50,6 +50,7 @@ public:
   int apply_transpose (const data_type *const in, data_type *const out) const;
 
   int apply_inverse (const data_type *const in, data_type *const out) const;
+  int apply_inverse_transpose (const data_type *const in, data_type *const out) const;
 
   // Dedicated interface to dealii Vector<double>
   int apply (const Vector<data_type> &in, Vector<data_type> &out) const;

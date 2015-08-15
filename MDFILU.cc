@@ -456,6 +456,64 @@ int MDFILU::apply_transpose (const data_type *const in, data_type *const out) co
   return (0);
 }
 
+int MDFILU::apply_inverse_transpose (const data_type *const in, data_type *const out) const
+{
+  // Apply (U^T)^-1 to in
+  for (global_index_type i=0; i<this->degree; ++i)
+    {
+      // Forward substitution
+      const global_index_type i_row = permute_logical_to_storage[i];
+
+      // Update vector value of current row for using below
+      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
+           iter_col < this->LU.end (i_row); ++iter_col)
+        {
+          const global_index_type j_col = iter_col->column();
+          const global_index_type j = permuta_storage_to_logical[j_col];
+          if (j == i)
+            {
+              Assert (iter_col->value() != 0.0,
+                      ExcMessage ("Zero pivot encountered!"));
+              out[i_row] = in[i_row]/iter_col->value();
+              break;
+            }
+        }
+
+      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
+           iter_col < this->LU.end (i_row); ++iter_col)
+        {
+          const global_index_type j_col = iter_col->column();
+          const global_index_type j = permuta_storage_to_logical[j_col];
+          if (j > i)
+            {
+              // Lower triangle only
+              out[j_col] -= iter_col->value() * out[i_row];
+            }
+        }
+    }
+
+  // Apply (L^T)^-1 to the result of ((U^T)^-1)*in
+  for (global_index_type ii=this->degree; ii>0; --ii)
+    {
+      // Backward substitution; be careful on "ii-1" because ii is unsigned
+      const global_index_type i = ii - 1;
+      const global_index_type i_row = permute_logical_to_storage[i];
+
+      for (typename DynamicMatrix::const_iterator iter_col = this->LU.begin (i_row);
+           iter_col < this->LU.end (i_row); ++iter_col)
+        {
+          const global_index_type j_col = iter_col->column();
+          const global_index_type j = permuta_storage_to_logical[j_col];
+          if (j < i)
+            {
+              // Upper triangle only
+              out[j_col] -= iter_col->value() * out[i_row];
+            }
+        }
+    }
+
+  return (0);
+}
 
 int MDFILU::apply_inverse (const data_type *const in, data_type *const out) const
 {
@@ -516,6 +574,7 @@ int MDFILU::apply (const Vector<data_type> &in, Vector<data_type> &out) const
           ExcDimensionMismatch (in.size(), out.size()));
   Assert (in.size() == degree,
           ExcDimensionMismatch (in.size(), this->degree));
+
   if (this->use_transpose)
     {
       return (this->apply_transpose (in.begin(), out.begin()));
@@ -533,7 +592,16 @@ int MDFILU::apply_inverse (const Vector<data_type> &in, Vector<data_type> &out) 
   Assert (in.size() == degree,
           ExcDimensionMismatch (in.size(), this->degree));
 
-  return (this->apply_inverse (in.begin(), out.begin()));
+  if (this->use_transpose)
+    {
+      return (this->apply_inverse_transpose (in.begin(), out.begin()));
+    }
+  else
+    {
+      return (this->apply_inverse (in.begin(), out.begin()));
+    }
+
+
 }
 
 
@@ -579,10 +647,22 @@ int MDFILU::ApplyInverse (const Epetra_MultiVector &in, Epetra_MultiVector &out)
           ExcDimensionMismatch (in.NumVectors(), out.NumVectors()));
 
   const global_index_type n_vectors = in.NumVectors();
-  for (global_index_type i=0; i<n_vectors; ++i)
+
+  if (this->use_transpose)
     {
-      this->apply_inverse (in[i], out[i]);
+      for (global_index_type i=0; i<n_vectors; ++i)
+        {
+          this->apply_inverse_transpose (in[i], out[i]);
+        }
     }
+  else
+    {
+      for (global_index_type i=0; i<n_vectors; ++i)
+        {
+          this->apply_inverse (in[i], out[i]);
+        }
+    }
+
   return (0);
 }
 
