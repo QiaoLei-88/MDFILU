@@ -6,7 +6,7 @@ if [ -z $1 ]; then
 fi
 
 if [ -f $1 ]; then
-  sed -i -e 's/[\(\)\,]/ /g' $1
+  sed -i "" -e 's/[\(\)\,]/ /g' $1
 else
   echo "The specified file doesn't exist or is not a regular file."
 fi
