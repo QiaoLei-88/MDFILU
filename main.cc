@@ -237,6 +237,76 @@ int main (int argc, char *argv[])
   mdfilu.SetUseTranspose (use_tranpose_init_stats);
 //[END]// //--------- Deal.II wrapped Trilinos Vector ---------//
 
+//--------- Finally, Preconditioner test ---------//
+  {
+    // No preconditioner first
+    Epetra_Vector o (system_matrix.trilinos_matrix().DomainMap());
+    Epetra_Vector b (View, system_matrix.trilinos_matrix().RangeMap(),
+                     v.begin());
+    AztecOO solver;
+    solver.SetAztecOption (AZ_output, AZ_none);
+    solver.SetAztecOption (AZ_solver, AZ_gmres);
+    solver.SetLHS (&o);
+    solver.SetRHS (&b);
+
+    solver.SetAztecOption (AZ_precond,         AZ_none);
+    solver.SetUserMatrix (const_cast<Epetra_CrsMatrix *>
+                          (&system_matrix.trilinos_matrix()));
+
+    const unsigned int max_iterations = 1000;
+    const double  linear_residual = 1e-8;
+    solver.Iterate (max_iterations, linear_residual);
+
+    std::ofstream fout ("apply.out", std::fstream::app);
+    fout << "GMRES Solved Ax=v without preconditioner:" << std::endl;
+    fout << "NumIters: " << solver.NumIters() << std::endl;
+    fout << "TrueResidual: " << solver.TrueResidual() << std::endl;
+    fout.precision (3);
+    fout << std::scientific;
+    for (global_index_type i=0; i<degree; ++i)
+      {
+        fout << o[i] << ' ';
+      }
+    fout << std::endl << std::endl;
+    fout.close();
+  }
+  {
+    // No preconditioner first
+    Epetra_Vector o (system_matrix.trilinos_matrix().DomainMap());
+    Epetra_Vector b (View, system_matrix.trilinos_matrix().RangeMap(),
+                     v.begin());
+    AztecOO solver;
+    solver.SetAztecOption (AZ_output, AZ_none);
+    solver.SetAztecOption (AZ_solver, AZ_gmres);
+    solver.SetLHS (&o);
+    solver.SetRHS (&b);
+
+    solver.SetUserMatrix (const_cast<Epetra_CrsMatrix *>
+                          (&system_matrix.trilinos_matrix()));
+
+    mdfilu.SetUseTranspose (false);
+    solver.SetPrecOperator (&mdfilu);
+
+    const unsigned int max_iterations = 1000;
+    const double  linear_residual = 1e-8;
+    solver.Iterate (max_iterations, linear_residual);
+
+    std::ofstream fout ("apply.out", std::fstream::app);
+    fout << "GMRES Solved Ax=v with MDFILU preconditioner:" << std::endl;
+    fout << "NumIters: " << solver.NumIters() << std::endl;
+    fout << "TrueResidual: " << solver.TrueResidual() << std::endl;
+    fout.precision (3);
+    fout << std::scientific;
+    for (global_index_type i=0; i<degree; ++i)
+      {
+        fout << o[i] << ' ';
+      }
+    fout << std::endl << std::endl;
+    fout.close();
+  }
+  mdfilu.SetUseTranspose (use_tranpose_init_stats);
+//[END]// //--------- Finally, Preconditioner test ---------//
+
 // #ifdef VERBOSE_OUTPUT
 //   debugStream.close();
 // #endif
