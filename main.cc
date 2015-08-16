@@ -15,15 +15,36 @@ int main (int argc, char *argv[])
   SourceMatrix system_matrix (degree, degree, /*max_entries_per_row*/estimated_row_length);
 
   // Set value for system_matrix
-  std::ifstream fin ("matrix.dat");
-  for (global_index_type i=0; i<degree; ++i)
-    for (global_index_type j=0; j<degree; ++j)
-      {
-        data_type value;
-        fin >> value;
-        system_matrix.set (i,j,value);
-      }
-  fin.close();
+  const bool use_sparse_matrix (true);
+  if (use_sparse_matrix)
+    {
+      std::ifstream fin ("sparse_matrix.dat");
+      while (true)
+        {
+          global_index_type i,j;
+          data_type value;
+          fin >> i >> j >> value;
+          if (fin.eof())
+            {
+              break;
+            }
+          system_matrix.set (i,j,value);
+        }
+      fin.close();
+    }
+  else
+    {
+      std::ifstream fin ("matrix.dat");
+      for (global_index_type i=0; i<degree; ++i)
+        for (global_index_type j=0; j<degree; ++j)
+          {
+            data_type value;
+            fin >> value;
+            system_matrix.set (i,j,value);
+          }
+      fin.close();
+    }
+
   system_matrix.compress (VectorOperation::insert);
   {
     // Out put system_matrix
