@@ -112,7 +112,11 @@ int main (int argc, char *argv[])
         v[i] = a[i];
       }
   }
+
+  // Cache initial transpose status
+  const bool use_tranpose_init_stats = mdfilu.UseTranspose();
 //--------- Deal.II native Vector ---------//
+  mdfilu.SetUseTranspose (false);
   {
     MDFVector o (v);
     mdfilu.apply (o,o);
@@ -155,6 +159,8 @@ int main (int argc, char *argv[])
     fout << o << std::endl;
     fout.close();
   }
+  // Set flags
+  mdfilu.SetUseTranspose (use_tranpose_init_stats);
 //[END]// //--------- Deal.II native Vector ---------//
 //--------- Deal.II wrapped Trilinos Vector ---------//
   mdfilu.SetUseTranspose (false);
@@ -228,6 +234,7 @@ int main (int argc, char *argv[])
     fout << std::endl << std::endl;
     fout.close();
   }
+  mdfilu.SetUseTranspose (use_tranpose_init_stats);
 //[END]// //--------- Deal.II wrapped Trilinos Vector ---------//
 
 // #ifdef VERBOSE_OUTPUT
