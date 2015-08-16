@@ -1,7 +1,10 @@
 #!/bin/bash
 
+echo "***** diff A.out *****"
 diff A.out A.out.reference
+echo "***** diff apply.out *****"
 diff apply.out apply.out.reference
+echo "***** diff LU.out *****"
 diff LU.out LU.out.reference
 
 
