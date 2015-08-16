@@ -104,6 +104,17 @@ private:
 
 
   const global_index_type degree;
+
+  // Because the Sparse matrix usually returns a zero when element (i,j)
+  // is out of the sparsity pattern. So it is not convenient to use zero
+  // as fill-in level for original entries.
+  // Here I set the fill-in level with offset 1.
+  // This is to say when fill-in level equals
+  //    0  :  level infinite, new fill-in
+  //    1  :  level 0 in article, original entry
+  //    2  :  level 1 fill in
+  //    ... so on the same.
+  static const global_index_type fill_in_level_for_original_entry = 1;
   const global_index_type estimated_row_length;
   const global_index_type fill_in_threshold;
   DynamicMatrix LU;

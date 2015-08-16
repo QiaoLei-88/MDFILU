@@ -11,7 +11,7 @@ MDFILU::MDFILU (const SourceMatrix &matrix,
   very_large_number (1.988e+211),
   degree (matrix.m()),
   estimated_row_length (estimated_row_length_in),
-  fill_in_threshold (fill_in_threshold_in),
+  fill_in_threshold (fill_in_threshold_in + fill_in_level_for_original_entry),
   LU (degree,degree, estimated_row_length),
   fill_in_level (degree, degree,estimated_row_length),
   permute_logical_to_storage (degree, invalid_index),
@@ -216,18 +216,11 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
       //   }
 
       // Set initial fill in level.
-      // Because the matrix access function SparseMatrixEZ.el(i,j) will return a zero when element
-      // (i,j) is out of the sparsity pattern, here I set the fill-in level with offset 1.
-      // That is to say when fill-in level equals
-      //    0  :  level infinite, new fill-in
-      //    1  :  level 0 in article, original entry
-      //    2  :  level 1 fill in
-      //    ... so on the same.
-
-      // for (global_index_type j_col=0; j_col<system_matrix.size(); ++j_col)
       for (global_index_type i_nz=0; i_nz<n_non_zero_in_row; ++i_nz)
         {
-          fill_in_level.set (i_row, incides_of_non_zeros[i_nz], 1);
+          fill_in_level.set (i_row,
+                             incides_of_non_zeros[i_nz],
+                             fill_in_level_for_original_entry);
           // // a(i,j) exists?
           // if (system_matrix. (i,j) == 0.0)
           //   {
@@ -316,10 +309,11 @@ void MDFILU::MDF_reordering_and_ILU_factoring()
               unsigned int new_fill_in_level = fill_in_level.el (i_row, j_col);
               if (new_fill_in_level == 0 /* fill in level for new entry*/)
                 {
-                  // Because we set original entry to level 1, what we need to set is
-                  // (lv(i)-1) + (lv(j)-1) + 1 + 1 = lv(i) + lv(j).
-                  new_fill_in_level = fill_in_level.el (row_to_factor,j_col) +
-                                      fill_in_level.el (i_row,row_to_factor);
+                  new_fill_in_level =
+                    (fill_in_level.el (row_to_factor,j_col) - fill_in_level_for_original_entry) +
+                    (fill_in_level.el (i_row,row_to_factor) - fill_in_level_for_original_entry) +
+                    1 +
+                    fill_in_level_for_original_entry;
                 }
 
               const unsigned int fill_in_threshold (3);
